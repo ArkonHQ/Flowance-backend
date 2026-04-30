@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import authRoute from './routes/auth.route.js';
 import clientRouter from "./routes/client.route.js";
+import dashboardRoutes from './routes/dashboard.route.js';
 
 const app = express();
 
@@ -13,6 +14,8 @@ app.use(helmet());
 app.use('/api/v1/auth', authRoute);
 
 app.use('/api/v1/clients', clientRouter);
+
+app.use('/api/v1/dashboard', dashboardRoutes);
 
 app.get('/health', (_req, res) => {
     res.status(200).json({ status: 'OK' });

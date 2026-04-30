@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
-import {date} from "joi";
-import * as schema from "mongoose/types/types.d.ts";
+
 
 const taskSchema = new mongoose.Schema({
     title: {
