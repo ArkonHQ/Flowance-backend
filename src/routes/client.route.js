@@ -1,5 +1,6 @@
 import { Router } from "express";
 import authMiddleware from "../middleware/auth.middleware.js";
+import { validateMiddleware as validate } from '../middleware/validate.middleware.js';
 import {
     getClient,
     createClient,
@@ -7,6 +8,7 @@ import {
     deleteClient,
     updateClient
 } from "../controllers/client.controller.js";
+import {updateClientSchema, createClientSchema} from "../validators/client.validator.js";
 
 const clientRouter = Router();
 
@@ -18,10 +20,10 @@ clientRouter.get("/:id", getClient);   // no need to repeat authMiddleware
 
 clientRouter.get("/", getClients);
 
-clientRouter.post("/", createClient);
+clientRouter.post("/", validate(createClientSchema), createClient);
 
 clientRouter.delete("/:id", deleteClient);
 
-clientRouter.put("/:id", updateClient);
+clientRouter.put("/:id", validate(updateClientSchema), updateClient);
 
 export default clientRouter;

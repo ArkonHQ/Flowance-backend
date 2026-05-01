@@ -1,6 +1,6 @@
 import Joi from "joi";
 
-export const regesterSchema = Joi.object({
+export const registerSchema = Joi.object({
     name: Joi.string().required().trim().max(50).min(3).messages({
     'string.empty': 'Please enter your name',
     'string.min': 'Name must be at least 3 characters',
