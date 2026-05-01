@@ -45,25 +45,12 @@ const taskSchema = new mongoose.Schema({
 
 
 
-// Middleware to set completedAt when status becomes 'done'
-taskSchema.pre('findOneAndUpdate', function (next) {
+taskSchema.pre('findOneAndUpdate', function () {
     const update = this.getUpdate();
     if (update.status) {
         update.completedAt = update.status === 'done' ? new Date() : null;
     }
-    next();
 });
-
-// Also handle findOneAndUpdate
-taskSchema.pre('findOneAndUpdate', function (next) {
-    const update = this.getUpdate();
-    if (update.status === 'done' && !update.completedAt) {
-        this.set({ completedAt: new Date() });
-    }else {
-        this.set ({ completedAt: null });
-    }
-    next ()
-})
 
 const Task = mongoose.model('Task', taskSchema);
 export default Task;

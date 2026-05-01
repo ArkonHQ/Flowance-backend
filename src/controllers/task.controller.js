@@ -78,6 +78,7 @@ export const updateTask = async (req, res) => {
         task.completedAt = null;
     }
 
+
     res.status(StatusCodes.OK).json({
         success: true,
         data: task,
