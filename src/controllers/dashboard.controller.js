@@ -6,25 +6,24 @@ import Invoice from "../models/invoice.model.js";
 // @route   GET /api/v1/dashboard/active-tasks
 // @access  Private
 
-export const activeTasks = async (req, res, next) => {
-    try{
+export const activeTasks = async (req, res) => {
 
         const tasks = await Task.find({
             status: 'in_progress',
-            assignee: req.user._id
-        }).populate({
-                path: 'project',
-                select: 'title client'
-            }).sort({ deadline: -1 })
+            owner: req.user._id
+        })
+            .sort({ deadline: -1 })
+
+            .populate({
+            path: 'project',
+            select: 'title client'})
 
         res.status(StatusCodes.OK).json({
             success: true,
             count: tasks.length,
             data: tasks,
         })
-    }catch(err){
-        next(err)
-    }
+
 }
 
 // @desc    Get all completed tasks for the logged-in user
@@ -40,7 +39,7 @@ export const completedTasks = async (req, res) => {
 
     // 2. Query Tasks
     const tasks = await Task.find({
-        assignee: req.user._id,
+        owner: req.user._id,
         status: 'done',
         completedAt: { $gte: monday }
     })
@@ -64,7 +63,7 @@ export const completedTasks = async (req, res) => {
 export const delayedTasks = async (req, res) => {
     // Query Delayed Tasks
     const tasks = await Task.find({
-        assignee: req.user._id,
+        owner: req.user._id,
         status: { $nin: ['cancelled', 'done'] },
         deadline: {$lt: new Date()},
     })

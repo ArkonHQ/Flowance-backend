@@ -20,6 +20,12 @@ const taskSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
+    project: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Project',
+        required: true,
+        index: true,
+    },
     completedAt: {
         type: Date,
         default: null
@@ -27,7 +33,6 @@ const taskSchema = new mongoose.Schema({
     assignee: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
         index: true,
     },
     owner: {
@@ -41,16 +46,13 @@ const taskSchema = new mongoose.Schema({
 
 
 // Middleware to set completedAt when status becomes 'done'
-taskSchema.pre('save', function (next) {
-    if (this.isModified('status')) {
-        if (this.status === 'done') {
-            this.completedAt = Date.now();
-        }else {
-             this.completedAt = null
-        }
+taskSchema.pre('findOneAndUpdate', function (next) {
+    const update = this.getUpdate();
+    if (update.status) {
+        update.completedAt = update.status === 'done' ? new Date() : null;
     }
     next();
-})
+});
 
 // Also handle findOneAndUpdate
 taskSchema.pre('findOneAndUpdate', function (next) {

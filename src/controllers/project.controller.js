@@ -34,11 +34,11 @@ export const getAllProjects = async (req, res) => {
 };
 
 export const createProject = async (req, res) => {
-    const { name, description, deadline, client, status } = req.body;
+    const { title, description, deadline, client, status } = req.body;
 
     const project = await Project.create({
         owner: req.user._id,
-        name,
+        title,
         description,
         deadline,
         client,
@@ -53,11 +53,11 @@ export const createProject = async (req, res) => {
 };
 
 export const updateProject = async (req, res) => {
-    const { name, status, deadline, client, description } = req.body;
+    const { title, status, deadline, client, description } = req.body;
 
     const project = await Project.findOneAndUpdate(
         { owner: req.user._id, _id: req.params.id },
-        { name, status, deadline, client, description },
+        { title, status, deadline, client, description },
         { new: true, runValidators: true }
     );
 

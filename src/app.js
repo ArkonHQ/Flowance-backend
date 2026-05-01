@@ -5,6 +5,8 @@ import authRoute from './routes/auth.route.js';
 import clientRouter from "./routes/client.route.js";
 import dashboardRoutes from './routes/dashboard.route.js';
 import invoiceRoute from "./routes/invoice.route.js";
+import projectRoute from "./routes/project.route.js";
+import taskRouter from "./routes/task.route.js";
 
 const app = express();
 
@@ -19,6 +21,10 @@ app.use('/api/v1/clients', clientRouter);
 app.use('/api/v1/dashboard', dashboardRoutes);
 
 app.use('/api/v1/invoice', invoiceRoute);
+
+app.use('/api/v1/projects', projectRoute);
+
+app.use('/api/v1/tasks', taskRouter);
 
 app.get('/health', (_req, res) => {
     res.status(200).json({ status: 'OK' });

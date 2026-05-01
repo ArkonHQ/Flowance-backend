@@ -1,21 +1,21 @@
 import Joi from 'joi';
 
 const statusEnum = ['todo', 'in_progress', 'done', 'cancelled'];
-const priorityEnum = [1, 2, 3];
+const priorityEnum = ['low', 'medium', "high" ];
 
-export const createTask = Joi.object({
+export const createTaskValidator = Joi.object({
     title: Joi.string().required().trim().min(1).messages({
         'string.empty': 'Task title is required',
     }),
     description: Joi.string().optional(),
     project: Joi.string().hex().length(24).required(),
     status: Joi.string().valid(...statusEnum).default('todo'),
-    priority: Joi.number().valid(...priorityEnum).default(2),
+    priority: Joi.number().valid(...priorityEnum).default("medium"),
     deadline: Joi.date().optional(),
 
 });
 
-export const updateTask = Joi.object({
+export const updateTaskValidator = Joi.object({
     title: Joi.string().trim().min(1).optional(),
     description: Joi.string().optional(),
     project: Joi.string().hex().length(24).optional(),
