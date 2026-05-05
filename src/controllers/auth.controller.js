@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/user.model.js';
 import { StatusCodes } from "http-status-codes";
 import { JWT_EXPIRES_IN, JWT_SECRET } from "../config/env.js";
+import bcrypt from "bcryptjs";
 
 // ──────────────────────────────────────────────
 // Helper: Generate JWT token
@@ -60,9 +61,45 @@ export const register = async (req, res) => {
 // @route   POST /api/v1/auth/login
 // @access  Public
 export const login = async (req, res) => {
-    // TODO: implement proper login logic
-    res.status(StatusCodes.OK).json({
-        success: true,
-        message: 'Login route hit — logic coming next',
-    });
+  const { email, password } = req.body;
+
+  try {
+
+      // Check if the user exist
+      const user = await User.findOne({ email })
+      if (!user) {
+          return res.status(StatusCodes.UNAUTHORIZED).json({
+              success: false,
+              message: 'Invalid email or password',
+          })
+      }
+
+      // Compare the entered password with the hashed password
+     const isMatch = await bcrypt.compare(password, user.password)
+      if (!isMatch) {
+          return res.status(StatusCodes.UNAUTHORIZED).json({
+              success: false,
+              message: 'Invalid email or password',
+          })
+      }
+
+      // Generate a JWT
+     const token = generateToken(user._id)
+
+      res.status(StatusCodes.OK).json({
+          success: true,
+          token,
+          user: {
+              id: user._id,
+              email: user.email,
+              name: user.name
+          }
+      })
+
+  } catch(err) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: err.message,
+        })
+  }
 };
