@@ -1,17 +1,20 @@
 import { logger } from '../utils/logger.js';
 import jwt from 'jsonwebtoken';
-import User from '../models/user.model.js';
+import { db } from '../config/db.js'
+import { users } from '../db/tables/users.js'
 import { StatusCodes } from "http-status-codes";
 import { JWT_EXPIRES_IN, JWT_SECRET } from "../config/env.js";
 import bcrypt from "bcryptjs";
+import {eq} from "drizzle-orm";
+
 
 // ──────────────────────────────────────────────
 // Helper: Generate JWT token
 // ──────────────────────────────────────────────
 
-const generateToken = (userId) => {
+const generateToken = (newUser) => {
     return jwt.sign(
-        { id: userId },
+        { id: newUser.id },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRES_IN || '30d' }
     );
@@ -24,82 +27,119 @@ const generateToken = (userId) => {
 // ──────────────────────────────────────────────
 
 export const register = async (req, res) => {
-    const { name, email, password } = req.body;
+    const { email, password } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-        return res.status(StatusCodes.CONFLICT).json({
-            success: false,
+    try {
+        const existingUser = await db
+            .select()
+            .from(users).
+            where(eq(users.email, email))
+
+        if ( existingUser.length > 0 ) return res.status(StatusCodes.CONFLICT).json({
             message: 'User already exists',
-        });
+        })
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        const [newUser] = await db
+            .insert(users)
+            .values({
+                name,
+                email,
+                password: hashedPassword,
+            })
+            .returning();
+
+        const token = generateToken(newUser);
+
+        res.status(StatusCodes.OK).json({
+            success: true,
+            token,
+            user:{
+                id: newUser.id,
+                email: newUser.email,
+                name: newUser.name,
+            }
+        })
+    } catch (err) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            message: 'Oops, something went wrong',
+            success: false,
+            error: err.message,
+        })
     }
-
-    // Create user
-    const user = await User.create({ name, email, password });
-
-    // Generate token
-    const token = generateToken(user._id);
-
-    // Log before responding (optional but cleaner)
-    logger.info(`New user registered: ${user.email}`);
-
-    // Respond
-    res.status(StatusCodes.CREATED).json({
-        success: true,
-        token,
-        user: {
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-        },
-    });
 };
 
 // @desc    Login user & return JWT
 // @route   POST /api/v1/auth/login
 // @access  Public
 export const login = async (req, res) => {
-  const { email, password } = req.body;
 
-  try {
+    const [email, password] = req.body;
 
-      // Check if the user exist
-      const user = await User.findOne({ email })
-      if (!user) {
-          return res.status(StatusCodes.UNAUTHORIZED).json({
-              success: false,
-              message: 'Invalid email or password',
-          })
-      }
+    try {
 
-      // Compare the entered password with the hashed password
-     const isMatch = await bcrypt.compare(password, user.password)
-      if (!isMatch) {
-          return res.status(StatusCodes.UNAUTHORIZED).json({
-              success: false,
-              message: 'Invalid email or password',
-          })
-      }
+        //Find user by Email
+        const result = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
 
-      // Generate a JWT
-     const token = generateToken(user._id)
+      const user = result[0]
 
-      res.status(StatusCodes.OK).json({
-          success: true,
-          token,
-          user: {
-              id: user._id,
-              email: user.email,
-              name: user.name
-          }
+      if (!user) return res.status(StatusCodes.UNAUTHORIZED).json({
+          message: 'Invalid email ',
       })
+
+        // Check password
+        const isMatch = await bcrypt.compare(password, user.password)
+
+        if (!isMatch) return res.status(StatusCodes.UNAUTHORIZED).json({
+            message: 'Invalid password',
+        })
+
+        const token = generateToken(user)
 
   } catch(err) {
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
             success: false,
-            message: err.message,
+            error: err.message,
+            message: 'Oops, something went wrong',
         })
   }
 };
+
+
+export const getMe = async (req, res) => {
+    try {
+        // req.user.id comes from your auth middleware
+        const result = await db
+        .select({
+            id: users.id,
+            name: users.name,
+            email: users.email,
+            createdAt: users.createdAt,
+        })
+        .from(users)
+        .where(eq(users.id, req.user.id))
+
+        const user = result[0]
+
+        if (!user) return res.status(StatusCodes.NOT_FOUND).json({
+            message: 'User not found',
+        })
+
+        res.json({
+            success: true,
+            user,
+        })
+    }catch (err) {
+        console.log(err)
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            error: err.message,
+            message: 'Oops, something went wrong',
+        })
+    }
+}

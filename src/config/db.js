@@ -1,16 +1,12 @@
-import mongoose from 'mongoose'
-import { logger } from "../utils/logger.js";
-import { MONGO_URI } from "./env.js";
+import { drizzle } from 'drizzle-orm/neon-http'
+import { neon } from '@neondatabase/serverless'
+import dotenv from 'dotenv'
 
-const connectDB = async () => {
-    try {
-        const conn = await mongoose.connect(MONGO_URI)
-        logger.info(`MongoDB Connected: ${conn.connection.host}`)
-    } catch (err) {
-        const error = new Error(`❌MongoDB Connection Error: ${err.message}`)
-        logger.error(error)
-        process.exit(1)
-    }
-}
+dotenv.config()
 
-export default connectDB
+export * from '../db/relations.js'
+export * from '../db/tables'
+
+
+const sql = neon(process.env.DATABASE_URL)
+export const db = drizzle(sql)

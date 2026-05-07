@@ -1,26 +1,72 @@
 import { StatusCodes } from "http-status-codes";
-import Client from "../models/client.model.js";
+import { db } from "../config/db.js"
+import { clients } from "../db/tables/cleints.js";
+import { eq } from 'drizzle-orm'
 
 
+// @desc    GET clients
+// @route   POST /api/v1/clients
+// @access  Private
+
+export const getClients = async (req, res) => {
+    try {
+        const allClients = await db
+            .select()
+            .from(clients)
+            .where(eq(clients.ownerId, req.user.id))
+
+        res.status(StatusCodes.OK).json({
+            status: true,
+            clients: allClients
+            count: clients.length
+        });
+    }catch(err) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            status: false,
+            error: err.message,
+            message: 'Oops! Something went wrong.'
+        })
+    }
+}
+
+
+// ---------------------------------------
 // @desc    GET a client
 // @route   POST /api/v1/clients/:id
 // @access  Private
-
+// ---------------------------------------
 export const getClient = async (req, res) => {
-    const client = await Client.findById({
-        owner:  req.user._id,
-        id: req.params.id,
-    })
+    try {
 
-    if (!client) return res.status(StatusCodes.NOT_FOUND).json({
-        success: false,
-        message: 'Not Found',
-    })
+        const result = await db
+            .select()
+            .from(clients)
+            .where(eq(clients.id, parseInt(req.params.id)))
+
+        const client = result[0]
+
+        if (!client) return res.status(StatusCodes.NOT_FOUND).json({
+            success: false,
+            message: 'Not Found',
+        })
+
+        // Verify ownership
+        if (client.ownerId !== req.user.id) return res.status(StatusCodes.FORBIDDEN).json({
+            success: false,
+            message: 'Not authorized',
+        })
 
     res.status(StatusCodes.OK).json({
         status: true,
-        data: client,
+        client,
     });
+    } catch (err) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: 'Internal Server Error',
+            error: err.message,
+        })
+    }
 }
 
 // @desc    Create a client
@@ -33,26 +79,23 @@ export const createClient = async (req, res) => {
     try {
 
         // Create new company, name, and email
-        const newClient = await Client.create({
-            email,
-            name,
-            company,
-            owner: req.user._id,
-        })
+        const [newClient] = await db
+            .insert(clients)
+            .values({
+                name,
+                email: email || null,
+                company: company || null,
+                ownerId: req.user.id
+            })
+            .returning();
 
-        // If the user not exist then create one
         return res.status(StatusCodes.CREATED).json({
             status: true,
-            data: newClient,
+            client: newClient,
             message: "Client created successfully",
         });
+
     } catch (error) {
-        if (error.code === 11000) {
-            return res.status(StatusCodes.CONFLICT).json({
-                success: false,
-                message: 'Client with this email already exists',
-            })
-        }
         console.error(error)
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
             success: false,
@@ -61,21 +104,6 @@ export const createClient = async (req, res) => {
     }
 }
 
-// @desc    GET clients
-// @route   POST /api/v1/clients
-// @access  Private
-
-export const getClients = async (req, res) => {
-    const clients = await Client.find({
-        owner: req.user._id,
-    })
-
-    res.status(StatusCodes.OK).json({
-        status: true,
-        data: clients,
-        count: clients.length
-    });
-}
 
 // @desc    Delete a client
 // @route   POST /api/v1/clients/:id
@@ -83,20 +111,46 @@ export const getClients = async (req, res) => {
 
 export const deleteClient = async (req, res) => {
 
-    const client = await Client.findOneAndDelete({
-        owner: req.user._id,
-        _id: req.params.id
-    })
+    try {
 
-    if (!client) return res.status(StatusCodes.NOT_FOUND).json({
-        status: false,
-        message: `Client not found`,
-    })
+        // Check ownership
+        const existing = await db
+            .select()
+            .from(clients)
+            .where(eq(clients.id, parseInt(req.params.id)))
 
-    res.status(StatusCodes.NOT_FOUND).json({
-        success: true,
-        message: `Client removed successfully`,
-    })
+        if (!existing[0]) return res.status(StatusCodes.NOT_FOUND).json({
+            status: false,
+            message: `Client not found`,
+        })
+
+        if (existing[0].ownerId !== req.user.id) return res.status(StatusCodes.FORBIDDEN).json({
+            status: false,
+            message: `Not authorized`,
+        })
+
+        const [deleted] = await db
+            .delete(clients)
+            .where(eq(clients.id, parseInt(req.params.id)))
+            .returning()
+
+        res.json({
+            status: true,
+            message: `Client deleted successfully`,
+            client: deleted
+        })
+
+
+    }catch(err) {
+        console.error('Delete client error:', err)
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            error: err.message,
+            message: 'Oops! Something went wrong.',
+        })
+    }
+
+
 }
 
 // @desc    Update a client
@@ -106,22 +160,49 @@ export const deleteClient = async (req, res) => {
 export const updateClient = async (req, res) => {
     const { email, name, company } = req.body;
 
-    const updatedClient = await Client.findOneAndUpdate(
-        { _id: req.params.id, owner: req.user._id },
-        { email, name, company },
-        { new: true, runValidators: true }
-    );
+    try {
+        const existing = await db
+            .select()
+            .from(clients)
+            .where(eq(clients.id, parseInt(req.params.id)))
 
-    if (!updatedClient) {
-        return res.status(StatusCodes.NOT_FOUND).json({
+        if (!existing[0]) {
+            return res.status(StatusCodes.NOT_FOUND).json({
+                success: false,
+                message: 'Client not found',
+            });
+        }
+
+        if (existing[0].ownerId !== req.user.id) return res.status(StatusCodes.FORBIDDEN).json({
             success: false,
-            message: 'Client not found',
-        });
-    }
+            message: 'Not authorized',
+        })
 
-    res.status(StatusCodes.OK).json({
-        success: true,
-        data: updatedClient,
-        message: 'Client updated successfully',
-    });
+        const [updated] = await db
+            .select(clients)
+            .set({
+                name: name || existing[0].name,
+                email: email !== undefined ? email : existing[0].email,
+                company: company !== undefined ? company : existing[0].company,
+                updatedAt: new Date(),
+            })
+            .where(eq(clients.id, parseInt(req.params.id)))
+            .returning();
+
+
+
+        res.status(StatusCodes.OK).json({
+            success: true,
+            client: updated(),
+            message: 'Client updated successfully',
+        });
+    }catch(err) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: 'Server error',
+            err: err.message,
+        })
+    }
 };
+
+
