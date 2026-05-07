@@ -1,107 +1,111 @@
-import Task from "../models/task.model.js";
+import { eq } from 'drizzle-orm'
+import { db } from "../config/db"
+import { tasks } from "../db/tables/tasks"
 import { StatusCodes } from "http-status-codes";
-
-export const getOneTask = async (req, res) => {
-    const task = await Task.findOne({
-        owner: req.user._id,
-        _id: req.params.id
-    })
-        .sort({ createdAt: -1 })
-        .populate('project', 'title client');
-
-    if (!task) {
-        return res.status(StatusCodes.NOT_FOUND).json({
-            success: false,
-            message: 'Task not found'
-        });
-    }
-
-    res.status(StatusCodes.OK).json({
-        success: true,
-        data: task,
-        message: "Task successfully found",
-    });
-};
+import {string} from "joi";
 
 export const getAllTasks = async (req, res) => {
-    const tasks = await Task.find({ owner: req.user._id })
-        .sort({ createdAt: -1 })
-        .populate('project', 'title client');
 
-    res.status(StatusCodes.OK).json({
-        success: true,
-        data: tasks,
-        message: "Successfully retrieved all tasks",
-    });
+    try {
+
+        const { projectId } = req.query
+
+        let query = db.select().from(tasks).where(eq(tasks.ownerId, req.user.id));
+
+        if (projectId) {
+            query = query.where(eq(tasks.projectId, parseInt(projectId)));
+        }
+
+        const allTasks = await query
+
+        res.json({
+            success: true,
+            tasks: allTasks,
+            message: "Tasks found successfully"
+        })
+
+    }catch(err) {
+        console.error("Get tasks error: ",err)
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: 'Oops! Something went wrong',
+            error: err.message
+        })
+    }
+
+
 };
 
 export const createTask = async (req, res) => {
-    const { project, title, status, priority, deadline, description } = req.body;
+    const { title, status, priority, deadline, projectId } = req.body;
 
-    const task = await Task.create({
-        project,
-        title,
-        status,
-        priority,
-        deadline,
-        description,
-        owner: req.user._id,
-    });
+    try {
 
-    res.status(StatusCodes.CREATED).json({
-        success: true,
-        data: task,
-        message: "Task successfully created",
-    });
-};
+        const [newTask] = await db
+            .insert(tasks)
+            .values({
+                title,
+                status: status || 'todo',
+                priority: priority || 'medium',
+                deadline: deadline ? new Date(deadline) : null,
+                projectId: parseInt(projectId),
+                ownerId: req.user.id,
+            })
+            .returning()
 
-export const updateTask = async (req, res) => {
-    const { project, title, status, priority, deadline, description } = req.body;
-
-    const task = await Task.findOneAndUpdate(
-        { owner: req.user._id, _id: req.params.id },
-        { project, title, status, priority, deadline, description },
-        { new: true, runValidators: true }
-    );
-
-    if (!task) {
-        return res.status(StatusCodes.NOT_FOUND).json({
-            success: false,
-            message: "Task not found or update failed",
+        res.status(StatusCodes.CREATED).json({
+            success: true,
+            task: newTask,
+            message: "Task successfully updated",
         });
+    }catch (err) {
+        console.error("Create task failed: ",err)
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: 'Oops! Something went wrong',
+            error: err.message
+        })
     }
-
-    if (status === 'done' && !completedAt) {
-        task.completedAt = new Date();
-    } else if (status !== 'done') {
-        // Optionally remove completedAt if task is no longer done
-        task.completedAt = null;
-    }
-
-
-    res.status(StatusCodes.OK).json({
-        success: true,
-        data: task,
-        message: "Task successfully updated",
-    });
 };
+
+
 
 export const deleteTask = async (req, res) => {
-    const task = await Task.findOneAndDelete({
-        owner: req.user._id,
-        _id: req.params.id
-    });
 
-    if (!task) {
-        return res.status(StatusCodes.NOT_FOUND).json({
+    try {
+
+        const existing = await db
+            .select()
+            .from(tasks)
+            .where(eq(tasks.ownerId, req.user.id));
+
+        if(!existing[0]) return res.status(StatusCodes.NOT_FOUND).json({
             success: false,
-            message: "Task not found or already deleted",
-        });
-    }
+            message: 'Task not found'
+        })
 
-    res.status(StatusCodes.OK).json({
-        success: true,
-        data: task,
-        message: "Task successfully removed",
-    });
+        if (existing[0].ownerId !== req.user.id) return res.status(StatusCodes.FORBIDDEN).json({
+            success: false,
+            message: 'Not authorized'
+        })
+
+        await db
+            .delete(tasks)
+            .where(eq(tasks.ownerId, req.user.id))
+            .returning()
+
+
+
+        res.status(StatusCodes.OK).json({
+            success: true,
+            message: "Task successfully removed",
+        });
+    }catch (err) {
+        console.error("Delete task failed: ",err)
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: 'Oops! Something went wrong',
+            error: err.message
+        })
+    }
 };

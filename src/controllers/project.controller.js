@@ -179,6 +179,7 @@ export const deleteProject = async (req, res) => {
 
         return res.status(StatusCodes.OK).json({
             success: true,
+            project: deleted,
             message: "Project removed successfully"
         });
     }catch(err) {
