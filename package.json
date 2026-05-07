@@ -2,14 +2,19 @@
   "name": "freelance-hq",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "server.ts",
   "type": "module",
   "scripts": {
+    "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
+    "db:push": "drizzle-kit push --config=drizzle.config.ts",
+    "db:studio": "drizzle-kit studio --config=drizzle.config.ts",
     "test": "cross-env NODE_ENV=development jest --forceExit",
-    "dev": "cross-env NODE_ENV=development nodemon server.js",
-    "start": "cross-env NODE_ENV=production node server.js",
     "lint": "eslint .",
-    "format": "pattern --write ."
+    "format": "pattern --write .",
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "clean": "rm -rf dist"
   },
   "private": true,
   "dependencies": {
@@ -40,12 +45,15 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/hapi": "^18.0.15",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/koa": "^3.0.2",
     "@types/node": "^25.6.0",
     "@types/pg": "^8.20.0",
     "cross-env": "^10.1.0",
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   }
 }
