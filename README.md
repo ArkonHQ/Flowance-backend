@@ -36,7 +36,7 @@ This repository contains the backend architecture and API layer powering the ent
 
 <p align="center">
   <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=nodejs,express,ts,postgres,drizzle,redis&perline=6" />
+    <img src="https://skillicons.dev/icons?i=nodejs,express,ts,postgres,&perline=6" />
   </a>
 </p>
 
