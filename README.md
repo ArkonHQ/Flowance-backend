@@ -36,14 +36,16 @@ This repository contains the backend architecture and API layer powering the ent
 
 <p align="center">
   <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=nodejs,express,postgres,typescript&perline=6" />
+    <img src="https://skillicons.dev/icons?i=nodejs,express,ts,postgres,drizzle,redis&perline=6" />
   </a>
 </p>
 
 <div align="center">
+  <img src="https://img.shields.io/badge/Validation-Zod-3E67B4?style=flat-square&logo=zod&logoColor=white" />
   <img src="https://img.shields.io/badge/Auth-JWT-000000?style=flat-square&logo=json-web-tokens&logoColor=white" />
-  <img src="https://img.shields.io/badge/Architecture-REST-ff69b4?style=flat-square" />
-  <img src="https://img.shields.io/badge/Type-Safety_Ready-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/Security-Helmet-0F172A?style=flat-square" />
+  <img src="https://img.shields.io/badge/DB_Host-Neon-00E599?style=flat-square&logo=neon&logoColor=white" />
+  <img src="https://img.shields.io/badge/Runtime-tsx-3178C6?style=flat-square&logo=ts-node&logoColor=white" />
 </div>
 
 ---
@@ -123,17 +125,13 @@ This repository contains the backend architecture and API layer powering the ent
 
 ## 🧱 Architecture
 
-```bash
-src/
-│
-├── modules/
-│   ├── auth/
-│   ├── clients/
-│   ├── projects/
-│   ├── tasks/
-│   ├── invoices/
-│   └── dashboard/
-│
-├── config/
-├── database/
-└── utils/
+### High‑Level Overview
+
+```mermaid
+graph TD
+    A[Client/Request] --> B[Express App]
+    B --> C[Middleware Layer]
+    C --> D[Module Layer]
+    D --> E[Service Layer]
+    E --> F[Persistence Layer - Drizzle ORM]
+    F --> G[(PostgreSQL)]
