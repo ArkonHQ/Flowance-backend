@@ -8,6 +8,34 @@
       "when": 1778165368765,
       "tag": "0000_little_crusher_hogan",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778220697403,
+      "tag": "0001_flashy_ezekiel",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778249048390,
+      "tag": "0002_tricky_blazing_skull",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778249091888,
+      "tag": "0003_secret_wraith",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1778249111501,
+      "tag": "0004_graceful_black_bolt",
+      "breakpoints": true
     }
   ]
 }

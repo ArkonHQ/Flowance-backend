@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db } from '../../config/db';
-import { projects } from '../../db/tables';
+import { projects } from '../../db/schema';
 import { CreateProjectInput, UpdateProjectInput } from './project.schema';
 
 export const getProjectsByOwner = async (ownerId: string) => {

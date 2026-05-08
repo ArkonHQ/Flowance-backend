@@ -1,8 +1,4 @@
-import { clients } from "../db/tables";
-import { users } from "../db/tables"
-import { projects } from "../db/tables";
-import { invoices } from "../db/tables";
-import { tasks } from "../db/tables";
+import { users, projects, tasks, clients, invoices } from "../db/schema";
 
 
 export type User = typeof users.$inferSelect

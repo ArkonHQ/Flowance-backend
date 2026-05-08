@@ -1,6 +1,6 @@
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../config/db';
-import { clients } from '../../db/tables/clients';
+import { clients } from '../../db/schema';
 import { CreateClientInput, UpdateClientInput } from './client.schema';
 
 export const getClientsByOwner = async (ownerId: string) => {

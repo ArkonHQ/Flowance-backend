@@ -1,5 +1,5 @@
 import { db } from '../../config/db';
-import { tasks, projects, invoices } from '../../db/tables';
+import { tasks, projects, invoices } from '../../db/schema';
 import { eq, and, lt, ne, gte, sql } from 'drizzle-orm';
 
 export const getActiveTasks = async (ownerId: string) => {

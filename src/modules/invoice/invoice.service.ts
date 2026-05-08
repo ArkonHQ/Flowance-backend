@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db } from '../../config/db';
-import { invoices } from '../../db/tables';
+import { invoices } from '../../db/schema';
 import { CreateInvoiceInput, UpdateInvoiceInput } from './invoice.schema';
 
 export const getInvoicesByOwner = async (ownerId: string) => {

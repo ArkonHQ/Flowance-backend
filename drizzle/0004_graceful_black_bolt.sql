@@ -1,0 +1,2 @@
+CREATE INDEX "idx_invoices_client_id_status" ON "invoices" USING btree ("client_id","status");--> statement-breakpoint
+CREATE INDEX "idx_invoices_paid_at_partial" ON "invoices" USING btree ("client_id","paid_at","due_date") WHERE status = 'paid';

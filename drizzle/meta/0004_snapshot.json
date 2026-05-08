@@ -1,6 +1,6 @@
 {
-  "id": "e36db981-d04b-470b-9b5c-735ec5f40d24",
-  "prevId": "3fd922d0-e5e5-46be-8130-0e9c3ea275db",
+  "id": "9f56fca0-c8cb-4839-a442-84258815973b",
+  "prevId": "ca5e206a-f8e1-49be-b56b-1c43bb9c1aa7",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -24,29 +24,29 @@
           "name": "email",
           "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "company": {
           "name": "company",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "ownerId": {
-          "name": "ownerId",
+        "owner_id": {
+          "name": "owner_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -55,12 +55,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "clients_ownerId_users_id_fk": {
-          "name": "clients_ownerId_users_id_fk",
+        "clients_owner_id_users_id_fk": {
+          "name": "clients_owner_id_users_id_fk",
           "tableFrom": "clients",
           "tableTo": "users",
           "columnsFrom": [
-            "ownerId"
+            "owner_id"
           ],
           "columnsTo": [
             "id"
@@ -70,15 +70,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "clients_email_unique": {
-          "name": "clients_email_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -107,8 +99,8 @@
           "notNull": true,
           "default": "'draft'"
         },
-        "dueDate": {
-          "name": "dueDate",
+        "due_date": {
+          "name": "due_date",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
@@ -129,7 +121,7 @@
           "name": "project_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "owner_id": {
           "name": "owner_id",
@@ -137,22 +129,72 @@
           "primaryKey": false,
           "notNull": true
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_invoices_client_id_status": {
+          "name": "idx_invoices_client_id_status",
+          "columns": [
+            {
+              "expression": "client_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_invoices_paid_at_partial": {
+          "name": "idx_invoices_paid_at_partial",
+          "columns": [
+            {
+              "expression": "client_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "paid_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "due_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "status = 'paid'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "invoices_client_id_clients_id_fk": {
           "name": "invoices_client_id_clients_id_fk",
@@ -242,27 +284,27 @@
           "primaryKey": false,
           "notNull": false
         },
-        "clientId": {
-          "name": "clientId",
+        "client_id": {
+          "name": "client_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "ownerId": {
-          "name": "ownerId",
+        "owner_id": {
+          "name": "owner_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -271,12 +313,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "projects_clientId_clients_id_fk": {
-          "name": "projects_clientId_clients_id_fk",
+        "projects_client_id_clients_id_fk": {
+          "name": "projects_client_id_clients_id_fk",
           "tableFrom": "projects",
           "tableTo": "clients",
           "columnsFrom": [
-            "clientId"
+            "client_id"
           ],
           "columnsTo": [
             "id"
@@ -284,12 +326,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "projects_ownerId_users_id_fk": {
-          "name": "projects_ownerId_users_id_fk",
+        "projects_owner_id_users_id_fk": {
+          "name": "projects_owner_id_users_id_fk",
           "tableFrom": "projects",
           "tableTo": "users",
           "columnsFrom": [
-            "ownerId"
+            "owner_id"
           ],
           "columnsTo": [
             "id"
@@ -360,15 +402,15 @@
           "primaryKey": false,
           "notNull": true
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -438,15 +480,15 @@
           "primaryKey": false,
           "notNull": true
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -488,7 +530,8 @@
       "values": [
         "low",
         "medium",
-        "high"
+        "high",
+        "urgent"
       ]
     },
     "public.project_status": {
@@ -497,7 +540,7 @@
       "values": [
         "planning",
         "active",
-        "hold",
+        "on_hold",
         "completed",
         "cancelled"
       ]
@@ -508,7 +551,9 @@
       "values": [
         "todo",
         "in_progress",
-        "done"
+        "done",
+        "delayed",
+        "cancelled"
       ]
     }
   },

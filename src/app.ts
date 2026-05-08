@@ -1,12 +1,12 @@
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
-import authRoute from './modules/auth/auth.routes.ts';
-import clientRouter from "./modules/client/client.routes.ts";
-import dashboardRoutes from './modules/dashboard/dashboard.routes.ts';
-import invoiceRoute from "./modules/invoice/invoice.routes.ts";
-import projectRoute from "./modules/project/project.routes.ts";
-import taskRouter from "./modules/task/task.routes.ts";
+import authRoute from './modules/auth/auth.routes';
+import clientRouter from "./modules/client/client.routes";
+import dashboardRoutes from './modules/dashboard/dashboard.routes';
+import invoiceRoute from "./modules/invoice/invoice.routes";
+import projectRoute from "./modules/project/project.routes";
+import taskRouter from "./modules/task/task.routes";
 
 const app = express();
 
@@ -39,4 +39,4 @@ app.use((err, _req, res, _next) => {
     });
 });
 
-export default app;
+export default app;

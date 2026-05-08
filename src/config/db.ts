@@ -1,15 +1,12 @@
 import { drizzle } from 'drizzle-orm/neon-http';
 import { neon } from '@neondatabase/serverless';
 import { DATABASE_URL } from './env.ts';
-import * as tables from '../db/tables/index.ts';
-import * as relations from '../db/relations/index.ts';
+import * as schema from '../db/schema';
 
 const sql = neon(DATABASE_URL!);
 
-const schema = { ...tables, ...relations };
-
 export const db = drizzle(sql, { schema });
-export { tables, relations };
+export { schema };
 
 export default async function connectDB() {
     try {

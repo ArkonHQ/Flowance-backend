@@ -1,9 +1,9 @@
-import { users } from "../tables/users";
-import { projects } from "../tables/projects";
-import { clients } from "../tables/clients";
-import { invoices } from "../tables/invoices";
+import { users } from "./tables/users";
+import { projects } from "./tables/projects";
+import { clients } from "./tables/clients";
+import { invoices } from "./tables/invoices";
 import { relations } from "drizzle-orm";
-import { tasks } from "../tables/tasks";
+import { tasks } from "./tables/tasks";
 
 
 export const userRelations = relations(users, ({ many }) => ({

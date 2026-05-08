@@ -1,6 +1,6 @@
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../config/db';
-import { tasks } from '../../db/tables';
+import { tasks } from '../../db/schema';
 import { CreateTaskInput, UpdateTaskInput } from './task.schema';
 
 export const getTasksByOwner = async (ownerId: number, projectId?: number) => {

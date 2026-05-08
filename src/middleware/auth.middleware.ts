@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import { db } from "../config/db";
 import { eq } from 'drizzle-orm';
 import { JWT_SECRET } from "../config/env";
-import { users } from "../db/tables";
+import { users } from "../db/schema";
 import { Request, Response, NextFunction } from 'express';
 
 const authMiddleware = async (
