@@ -9,7 +9,6 @@
 
   <p>
     <img src="https://img.shields.io/badge/status-in_development-yellow?style=flat-square" />
-    <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" />
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" />
   </p>
 </div>
