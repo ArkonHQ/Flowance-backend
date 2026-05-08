@@ -1,7 +1,7 @@
-import { db } from '../config/db.ts';
-import { projects } from "../db/tables/projects.ts";
-import { clients } from "../db/tables/clients.ts";
-import { eq, and } from "drizzle-orm"
+import { db } from '../config/db';
+import { projects } from "../db/tables";
+import { clients } from "../db/tables/clients";
+import { eq } from "drizzle-orm"
 
 import { StatusCodes } from "http-status-codes";
 
@@ -53,7 +53,7 @@ export const getAllProjects = async (req, res) => {
             message: 'Projects successfully retrieved'
         });
 
-    } catch (err) {
+    } catch (err: any) {
         console.error('Get projects error:', err)
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
             success: false,
@@ -85,7 +85,7 @@ export const createProject = async (req, res) => {
             message: "Project created",
             project: newProject
         });
-    } catch (err) {
+    } catch (err: any) {
         console.error('Create project error:', err)
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
             success: false,
@@ -182,4 +182,4 @@ export const deleteProject = async (req, res) => {
             message: 'Internal Server Error'
         })
     }
-};
+};

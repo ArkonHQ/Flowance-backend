@@ -1,24 +1,22 @@
 // routes/invoice.route.ts
 import { Router } from 'express';
-import auth from '../middleware/auth.middleware.ts';
-import { validateMiddleware as validate } from '../middleware/validate.middleware.ts';
-import { createInvoiceSchema, updateInvoiceSchema } from '../validators/invoice.validator.ts';
 import {
     getAllInvoices,
     getOneInvoice,
     createInvoice,
     updateInvoice,
     deleteInvoice
-} from '../controllers/invoice.controller.ts';
+} from '../controllers/invoice.controller';
+import authMiddleware from "../middleware/auth.middleware";
 
 const router = Router();
 
-router.use(auth);
+router.use(authMiddleware)
 
 router.get('/', getAllInvoices);
 router.get('/:id', getOneInvoice);
-router.post('/', validate(createInvoiceSchema), createInvoice);
-router.put('/:id', validate(updateInvoiceSchema), updateInvoice);
+router.post('/', createInvoice);
+router.put('/:id', updateInvoice);
 router.delete('/:id', deleteInvoice);
 
 export default router;

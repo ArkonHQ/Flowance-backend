@@ -1,15 +1,17 @@
-import { StatusCodes } from "http-status-codes";
+import { ZodSchema } from 'zod';
+import { Request, Response, NextFunction } from 'express';
+import { StatusCodes } from 'http-status-codes';
 
+export const validate = (schema: ZodSchema) => (req: Request, res: Response, next: NextFunction) => {
+    const result = schema.safeParse(req.body);
 
-
-export const validateMiddleware = (schema) => (req, res, next) => {
-    const { error } = schema.validate(req.body, { abortEarly: false });
-    if (error) {
-        const message = error.details.map(detail => detail.message).join(", ");
-        return res.status(StatusCodes.BAD_REQUEST).json({
-            success: false,
-            message
-        });
+    if (!result.success) {
+        const message = result.error.issues
+            .map((i) => `${i.path.join('.')}: ${i.message}`)
+            .join(', ');
+        return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message });
     }
+
+    req.body = result.data
     next();
-};
+}

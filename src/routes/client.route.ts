@@ -1,29 +1,26 @@
 import { Router } from "express";
-import authMiddleware from "../middleware/auth.middleware.ts";
-import { validateMiddleware as validate } from '../middleware/validate.middleware.ts';
+import authMiddleware from "../middleware/auth.middleware";
 import {
     getClient,
     createClient,
     getClients,
     deleteClient,
     updateClient
-} from "../controllers/client.controller.ts";
-import {updateClientSchema, createClientSchema} from "../validators/client.validator.ts";
+} from "../controllers/client.controller";
+
 
 const clientRouter = Router();
 
-// Apply auth middleware to all routes in this router
-clientRouter.use(authMiddleware);
+clientRouter.use(authMiddleware)
 
-// Corrected route: use "/:id" for dynamic parameter
-clientRouter.get("/:id", getClient);   // no need to repeat authMiddleware
+clientRouter.get("/:id", getClient);
 
 clientRouter.get("/", getClients);
 
-clientRouter.post("/", validate(createClientSchema), createClient);
+clientRouter.post("/", createClient);
 
 clientRouter.delete("/:id", deleteClient);
 
-clientRouter.put("/:id", validate(updateClientSchema), updateClient);
+clientRouter.put("/:id", updateClient);
 
 export default clientRouter;

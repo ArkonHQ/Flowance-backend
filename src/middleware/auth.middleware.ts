@@ -3,34 +3,8 @@ import { StatusCodes } from 'http-status-codes';
 import { db } from "../config/db";
 import { eq } from 'drizzle-orm';
 import { JWT_SECRET } from "../config/env";
-import { users } from "../db/tables/index";
+import { users } from "../db/tables";
 import { Request, Response, NextFunction } from 'express';
-
-// Define the decoded JWT payload type
-interface JwtPayload {
-    id: string;
-    email?: string;
-    iat?: number;
-    exp?: number;
-}
-
-// Define the User type (without password)
-interface User {
-    id: string;
-    name: string;
-    email: string;
-    createdAt: Date;
-    updatedAt: Date;
-}
-
-// Extend Express Request type to include user property
-declare global {
-    namespace Express {
-        interface Request {
-            user?: User;
-        }
-    }
-}
 
 const authMiddleware = async (
     req: Request,
@@ -53,8 +27,7 @@ const authMiddleware = async (
 
     // Verify token
     try {
-        // @ts-ignore
-        const decoded = jwt.verify(token, JWT_SECRET)
+        const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
 
         // Find user (excluding password) and attach to request
         const result = await db
@@ -79,7 +52,6 @@ const authMiddleware = async (
         }
 
         // Attach the full user object to req
-        // @ts-ignore
         req.user = user;
         next();
     } catch (err) {

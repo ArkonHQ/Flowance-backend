@@ -1,8 +1,6 @@
 import { Router } from "express";
-import authMiddleware from "../middleware/auth.middleware.ts";
-import {validateMiddleware as validate} from "../middleware/validate.middleware.ts";
-import {createTask, deleteTask, getAllTasks, getOneTask, updateTask} from "../controllers/task.controller.ts";
-import { createTaskValidator, updateTaskValidator } from "../validators/task.validator.ts";
+import {createTask, deleteTask, getAllTasks, getOneTask, updateTask} from "../controllers/task.controller";
+import authMiddleware from "../middleware/auth.middleware";
 
 const taskRouter = Router();
 
@@ -12,9 +10,9 @@ taskRouter.get("/", getAllTasks)
 
 taskRouter.get("/:id", getOneTask)
 
-taskRouter.post("/", validate(createTaskValidator),createTask)
+taskRouter.post("/", createTask)
 
-taskRouter.put("/:id", validate(updateTaskValidator),updateTask)
+taskRouter.put("/:id", updateTask)
 
 taskRouter.delete("/:id", deleteTask)
 

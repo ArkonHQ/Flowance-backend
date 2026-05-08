@@ -1,15 +1,16 @@
 import { Router } from "express";
-import authMiddleware from "../middleware/auth.middleware.ts";
+
 import {
     activeTasks,
     completedTasks,
     delayedTasks,
     getEarnings
-} from "../controllers/dashboard.controller.ts";
+} from "../controllers/dashboard.controller";
+import authMiddleware from "../middleware/auth.middleware";
 
 const dashboardRoutes = Router();
 
-dashboardRoutes.use(authMiddleware);
+dashboardRoutes.use(authMiddleware)
 
 dashboardRoutes.get("/active-tasks", activeTasks)
 

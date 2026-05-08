@@ -4,13 +4,11 @@ import { clients } from "./clients";
 import { projects } from "./projects";
 import { users } from "./users";
 
-
-
 export const invoices = pgTable('invoices', {
     id: serial('id').primaryKey(),
     amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
     status: invoiceStatusEnum('status').default('draft').notNull(),
-    dueDate: timestamp('dueDate'),
+    dueDate: timestamp('due_date'),
     paidAt: timestamp('paid_at'),
     clientId: integer('client_id')
         .references(() => clients.id, { onDelete: 'cascade' })
@@ -21,6 +19,7 @@ export const invoices = pgTable('invoices', {
     ownerId: integer('owner_id')
         .references(() => users.id, { onDelete: 'cascade' })
         .notNull(),
-    createdAt: timestamp('createdAt').defaultNow().notNull(),
-    updatedAt: timestamp('updatedAt').defaultNow().notNull(),
-})
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+

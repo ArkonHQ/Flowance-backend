@@ -1,9 +1,8 @@
-import { logger } from '../utils/logger.ts';
 import jwt from 'jsonwebtoken';
-import { db } from '../config/db.ts'
-import { users } from '../db/tables/users.ts'
+import { db } from '../config/db'
+import { users } from '../db/tables'
 import { StatusCodes } from "http-status-codes";
-import { JWT_EXPIRES_IN, JWT_SECRET } from "../config/env.ts";
+import { JWT_EXPIRES_IN, JWT_SECRET } from "../config/env";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 
@@ -29,7 +28,6 @@ const generateToken = (newUser) => {
 export const register = async (req, res) => {
     const { name, email, password } = req.body;
 
-    try {
         const existingUser = await db
             .select()
             .from(users)

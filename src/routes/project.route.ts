@@ -1,7 +1,4 @@
 import { Router } from "express";
-import authMiddleware from "../middleware/auth.middleware";
-import { validateMiddleware as validate } from "../middleware/validate.middleware";
-import { updateProjectValidator, createProjectValidator } from "../validators/project.validator";
 import {
     createProject,
     deleteProject,
@@ -9,18 +6,19 @@ import {
     getOneProject,
     updateProject
 } from "../controllers/project.controller";
+import authMiddleware from "../middleware/auth.middleware";
 
 const projectRouter = Router();
 
-projectRouter.use(authMiddleware);
+projectRouter.use(authMiddleware)
 
 projectRouter.get("/", getAllProjects)
 
 projectRouter.get("/:id", getOneProject)
 
-projectRouter.post("/", validate(createProjectValidator), createProject)
+projectRouter.post("/", createProject)
 
-projectRouter.put("/:id", validate(updateProjectValidator), updateProject)
+projectRouter.put("/:id",  updateProject)
 
 projectRouter.delete("/:id", deleteProject)
 
