@@ -14,8 +14,7 @@ export const invoices = pgTable('invoices', {
         .references(() => clients.id, { onDelete: 'cascade' })
         .notNull(),
     projectId: integer('project_id')
-        .references(() => projects.id, { onDelete: 'cascade' })
-        .notNull(),
+        .references(() => projects.id, { onDelete: 'cascade' }),
     ownerId: integer('owner_id')
         .references(() => users.id, { onDelete: 'cascade' })
         .notNull(),
