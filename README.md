@@ -35,7 +35,7 @@ This repository contains the backend architecture and API layer powering the ent
 
 <p align="center">
   <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=nodejs,express,ts,postgres,&perline=6" />
+    <img src="https://skillicons.dev/icons?i=nodejs,express,ts,postgres&perline=6" />
   </a>
 </p>
 
@@ -57,14 +57,10 @@ This repository contains the backend architecture and API layer powering the ent
 - Protected routes  
 - Role‑based architecture ready
 
----
-
 ### Clients
 - Create and manage clients  
 - Track client‑related projects  
 - Analyze client activity
-
----
 
 ### Projects
 - Full lifecycle management  
@@ -72,28 +68,20 @@ This repository contains the backend architecture and API layer powering the ent
 - Deadline monitoring  
 - Progress insights
 
----
-
 ### Tasks
 - Task organization inside projects  
 - Completion tracking  
 - Priority & status handling
-
----
 
 ### Invoices
 - Generate invoices  
 - Track paid / unpaid  
 - Invoice status management
 
----
-
 ### Payments
 - Record incoming payments  
 - Payment history  
 - Revenue analytics
-
----
 
 ### Dashboard Analytics
 - Monthly earnings comparison  
@@ -124,11 +112,28 @@ This repository contains the backend architecture and API layer powering the ent
 
 ## 🧱 Architecture
 
+> **Design philosophy:** clean separation of concerns, type‑safety end‑to‑end, and a modular monolith ready to split into microservices when needed.
+
+### 1. High‑Level Request Flow
+
 ```mermaid
-graph TD
-    A[Client/Request] --> B[Express App]
-    B --> C[Middleware Layer]
-    C --> D[Module Layer]
-    D --> E[Service Layer]
-    E --> F[Persistence Layer - Drizzle ORM]
-    F --> G[(PostgreSQL)]
+sequenceDiagram
+    participant Client
+    participant Express
+    participant Middleware
+    participant Controller
+    participant Service
+    participant DrizzleORM
+    participant Database
+
+    Client->>Express: HTTP Request
+    Express->>Middleware: Auth, Validation, Logging
+    Middleware-->>Controller: Sanitised Request + User Context
+    Controller->>Service: Business Logic Call
+    Service->>DrizzleORM: Type‑safe Query
+    DrizzleORM->>Database: SQL
+    Database-->>DrizzleORM: Result Rows
+    DrizzleORM-->>Service: Typed Entities
+    Service-->>Controller: Processed Data
+    Controller-->>Express: JSON Response
+    Express-->>Client: HTTP Response
