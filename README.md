@@ -125,8 +125,6 @@ This repository contains the backend architecture and API layer powering the ent
 
 ## 🧱 Architecture
 
-### High‑Level Overview
-
 ```mermaid
 graph TD
     A[Client/Request] --> B[Express App]
