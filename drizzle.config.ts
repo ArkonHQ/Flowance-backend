@@ -4,8 +4,8 @@ import { config } from 'dotenv';
 config({ path: '.env.development.local' });
 
 export default defineConfig({
-    schema: './src/db/**/*.ts',  // Point to all TS files in db folder
-    out: './drizzle',  // Usually outside src
+    schema: './src/db/**/*.ts',
+    out: './drizzle',
     dialect: 'postgresql',
     dbCredentials: {
         url: process.env.DATABASE_URL!,

@@ -27,11 +27,11 @@ app.use('/api/v1/projects', projectRoute);
 
 app.use('/api/v1/tasks', taskRouter);
 
-app.get('/health', (_req, res) => {
+app.get('/health', (_req: any, res: any) => {
     res.status(200).json({ status: 'OK' });
 });
 
-app.use((err, _req, res, _next) => {
+app.use((err: { statusCode: number; message: string; }, _req: any, res: any, _next: any) => {
     const statusCode = err.statusCode || 500;
     res.status(statusCode).json({
         success: false,
