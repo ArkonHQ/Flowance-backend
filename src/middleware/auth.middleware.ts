@@ -6,6 +6,11 @@ import { JWT_SECRET } from "../config/env";
 import { users } from "../db/schema";
 import { Request, Response, NextFunction } from 'express';
 
+
+interface JwtPayload {
+    id: number;
+}
+
 const authMiddleware = async (
     req: Request,
     res: Response,
@@ -27,7 +32,7 @@ const authMiddleware = async (
 
     // Verify token
     try {
-        const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+        const decoded = jwt.verify(token, JWT_SECRET) as unknown as JwtPayload;
 
         // Find user (excluding password) and attach to request
         const result = await db
@@ -52,7 +57,7 @@ const authMiddleware = async (
         }
 
         // Attach the full user object to req
-        req.user = user;
+        (req as any).user = user;
         next();
     } catch (err) {
         res.status(StatusCodes.UNAUTHORIZED).json({

@@ -1,4 +1,4 @@
-import { integer, numeric, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { index, integer, numeric, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 import { invoiceStatusEnum } from "../enums";
 import { clients } from "./clients";
 import { projects } from "./projects";
@@ -20,5 +20,9 @@ export const invoices = pgTable('invoices', {
         .notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
-
+}, (table) => ({
+    // Indexes go here
+    clientStatusIdx: index('idx_invoice_client_id_status')
+        .on(table.clientId, table.status)
+        .concurrently(),
+}));

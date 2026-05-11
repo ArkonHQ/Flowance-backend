@@ -1,7 +1,7 @@
 import { pgTable, serial, text, timestamp, integer, numeric } from 'drizzle-orm/pg-core';
-import { projectStatusEnum } from '../enums';
-import { clients } from './clients';
-import { users } from './users';
+import { projectStatusEnum } from '../schema';
+import { clients } from '../schema';
+import { users } from '../schema';
 
 export const projects = pgTable('projects', {
     id: serial('id').primaryKey(),

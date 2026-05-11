@@ -6,7 +6,7 @@ import { users } from '../../db/schema';
 import { JWT_EXPIRES_IN, JWT_SECRET } from "../../config/env";
 import { RegisterInput, LoginInput } from './auth.schema';
 
-export const generateToken = (user: { id: string }) => {
+export const generateToken = (user: { id: number }) => {
     return jwt.sign(
         { id: user.id },
         JWT_SECRET,
@@ -16,13 +16,18 @@ export const generateToken = (user: { id: string }) => {
 
 export const findUserByEmail = async (email: string) => {
     const result = await db
-        .select()
+        .select({
+            id: users.id,
+            name: users.name,
+            email: users.email,
+            password: users.password,
+        })
         .from(users)
         .where(eq(users.email, email));
     return result[0];
 };
 
-export const findUserById = async (id: string) => {
+export const findUserById = async (id: number) => {
     const result = await db
         .select({
             id: users.id,

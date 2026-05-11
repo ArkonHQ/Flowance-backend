@@ -7,7 +7,7 @@ declare namespace Express {
             email: string;
             createdAt: Date;
             updatedAt: Date;
-        };
+        }
     }
 }
 
