@@ -43,6 +43,13 @@
       "when": 1778476463267,
       "tag": "0005_known_rhodey",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778491834924,
+      "tag": "0006_tidy_groot",
+      "breakpoints": true
     }
   ]
 }

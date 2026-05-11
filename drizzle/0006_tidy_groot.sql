@@ -1,0 +1,5 @@
+CREATE MATERIALIZED VIEW "public"."client_insights_mv" AS (select "clients"."id", "clients"."owner_id", "clients"."name", count(distinct "projects"."id")::int as "total_projects", coalesce(sum(case when "invoices"."status" = 'paid' then "invoices"."amount" else 0 end), 0) as "total_earned", coalesce(sum(case when "invoices"."status" in ('sent', 'overdue') then "invoices"."amount" else 0 end), 0) as "unpaid_amount", coalesce(round(avg(case when "invoices"."status" = 'paid' then extract(epoch from ("invoices"."paid_at" - "invoices"."due_date")) / 86400 end)::numeric, 2), 0) as "avg_payment_delay_days", case
+        when coalesce(avg(case when "invoices"."status" = 'paid' then extract(epoch from ("invoices"."paid_at" - "invoices"."due_date")) / 86400 end), 0) > 30 then 'high'
+        when coalesce(sum(case when "invoices"."status" in ('sent', 'overdue') then 1 else 0 end), 0) > 0 then 'medium'
+        else 'low'
+      end as "risk_level" from "clients" left join "projects" on "projects"."client_id" = "clients"."id" left join "invoices" on "invoices"."client_id" = "clients"."id" group by "clients"."id", "clients"."owner_id", "clients"."name");
