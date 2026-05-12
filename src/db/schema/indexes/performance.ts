@@ -26,6 +26,7 @@ export const invoice = pgTable('invoices', {
         .notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
+    deletedAt: timestamp("delete_at"),
 }, (tables) => ({
     clientStatusIdx: index('idx_invoices_client_id_status').on(tables.clientId, tables.status),
     paidDatesIdx: index('idx_invoices_paid_at_partial').on(tables.clientId, tables.paidAt, tables.dueDate).where(sql`status = 'paid'`)

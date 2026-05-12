@@ -18,5 +18,5 @@ export const tasks = pgTable('tasks', {
     .notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp("delete_at"),
 });
-

@@ -12,6 +12,7 @@ export const user = pgTable("user", {
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
+  deletedAt: timestamp("delete_at"),
 });
 
 export const session = pgTable(
@@ -29,6 +30,7 @@ export const session = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    deletedAt: timestamp("delete_at"),
   },
   (table) => [index("session_userId_idx").on(table.userId)],
 );
@@ -53,6 +55,7 @@ export const account = pgTable(
     updatedAt: timestamp("updated_at")
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
+    deletedAt: timestamp("delete_at"),
   },
   (table) => [index("account_userId_idx").on(table.userId)],
 );
@@ -69,6 +72,7 @@ export const verification = pgTable(
       .defaultNow()
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
+    deletedAt: timestamp("delete_at"),
   },
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
