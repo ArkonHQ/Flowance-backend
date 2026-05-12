@@ -24,6 +24,7 @@
     "bcryptjs": "^3.0.3",
     "better-auth": "^1.6.9",
     "cookie": "^1.1.1",
+    "corn": "^0.0.1",
     "cors": "^2.8.6",
     "drizzle-orm": "^0.45.2",
     "env-cross": "^0.0.1-security",
