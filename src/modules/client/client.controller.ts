@@ -1,10 +1,11 @@
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import * as clientService from "./client.service";
+import { clientService } from "./client.service";
 import { asyncHandler } from "../../utils/asyncHandler";
 
+
 export const getClients = asyncHandler(async (req: any, res: Response) => {
-    const allClients = await clientService.getClientsByOwner(req.user.id);
+    const allClients = await clientService.getActiveClients(req.user.id);
     res.status(StatusCodes.OK).json({
         success: true,
         clients: allClients,
@@ -13,7 +14,7 @@ export const getClients = asyncHandler(async (req: any, res: Response) => {
 });
 
 export const getClient = asyncHandler(async (req: any, res: Response) => {
-    const client = await clientService.getClientById(parseInt(req.params.id));
+    const client = await clientService.getActiveClientById(parseInt(req.params.id), req.user.id);
 
     if (!client) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -36,7 +37,10 @@ export const getClient = asyncHandler(async (req: any, res: Response) => {
 });
 
 export const createClient = asyncHandler(async (req: any, res: Response) => {
-    const newClient = await clientService.createClient(req.user.id, req.body);
+    const newClient = await clientService.createClient({
+        ...req.body,
+        ownerId: req.user.id
+    });
     res.status(StatusCodes.CREATED).json({
         success: true,
         client: newClient,
@@ -45,7 +49,7 @@ export const createClient = asyncHandler(async (req: any, res: Response) => {
 });
 
 export const deleteClient = asyncHandler(async (req: any, res: Response) => {
-    const client = await clientService.getClientById(parseInt(req.params.id));
+    const client = await clientService.getActiveClientById(parseInt(req.params.id), req.user.id);
 
     if (!client) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -61,7 +65,7 @@ export const deleteClient = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    const deleted = await clientService.deleteClient(parseInt(req.params.id));
+    const deleted = await clientService.deleteClient(parseInt(req.params.id), req.user.id);
     res.json({
         success: true,
         message: `Client deleted successfully`,
@@ -70,7 +74,7 @@ export const deleteClient = asyncHandler(async (req: any, res: Response) => {
 });
 
 export const updateClient = asyncHandler(async (req: any, res: Response) => {
-    const client = await clientService.getClientById(parseInt(req.params.id));
+    const client = await clientService.getActiveClientById(parseInt(req.params.id), req.user.id);
 
     if (!client) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -86,10 +90,28 @@ export const updateClient = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    const updated = await clientService.updateClient(parseInt(req.params.id), req.body);
+    const updated = await clientService.updateClient(parseInt(req.params.id), req.user.id, req.body);
     res.status(StatusCodes.OK).json({
         success: true,
         client: updated,
         message: 'Client updated successfully',
     });
 });
+
+export const restoreClient = async(req: any, res: Response) => {
+
+    try {
+    const ownerId = req.user.id;
+    const clientId = parseInt(req.params.id);
+    await clientService.restoreClient(clientId, ownerId);
+    res.status(StatusCodes.OK).json({ success: true, message: 'Client restored' })
+    }catch (err: any) {
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            message: 'Failed to restore client',
+            error: err.message
+        })
+
+    }
+
+}

@@ -20,7 +20,7 @@ export const invoices = pgTable('invoices', {
         .notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
-    deletedAt: timestamp("delete_at"),
+    deletedAt: timestamp("deleted_at"),
 }, (table) => ({
     // Indexes go here
     clientStatusIdx: index('idx_invoice_client_id_status')

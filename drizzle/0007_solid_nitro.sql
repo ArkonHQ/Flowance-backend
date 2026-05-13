@@ -1,0 +1,10 @@
+DROP MATERIALIZED VIEW "public"."client_insights_mv";--> statement-breakpoint
+ALTER TABLE "clients" ADD COLUMN "deleted_at" timestamp;--> statement-breakpoint
+ALTER TABLE "invoices" ADD COLUMN "deleted_at" timestamp;--> statement-breakpoint
+ALTER TABLE "projects" ADD COLUMN "deleted_at" timestamp;--> statement-breakpoint
+ALTER TABLE "tasks" ADD COLUMN "deleted_at" timestamp;--> statement-breakpoint
+CREATE MATERIALIZED VIEW "public"."client_insights_mv" AS (select "clients"."id", "clients"."owner_id", "clients"."name", COUNT(DISTINCT CASE WHEN "projects"."deleted_at" IS NULL THEN "projects"."id" END)::int as "total_projects", COALESCE(SUM(CASE WHEN "invoices"."status" = 'paid' AND "invoices"."deleted_at" IS NULL THEN "invoices"."amount" ELSE 0 END), 0) as "total_earned", COALESCE(SUM(CASE WHEN "invoices"."status" IN ('sent', 'overdue') AND "invoices"."deleted_at" IS NULL THEN "invoices"."amount" ELSE 0 END), 0) as "unpaid_amount", COALESCE(ROUND(AVG(CASE WHEN "invoices"."status" = 'paid' AND "invoices"."deleted_at" IS NULL THEN EXTRACT(EPOCH FROM ("invoices"."paid_at" - "invoices"."due_date")) / 86400 END)::numeric, 2), 0) as "avg_payment_delay_days", CASE
+        WHEN COALESCE(AVG(CASE WHEN "invoices"."status" = 'paid' AND "invoices"."deleted_at" IS NULL THEN EXTRACT(EPOCH FROM ("invoices"."paid_at" - "invoices"."due_date")) / 86400 END), 0) > 30 THEN 'high'
+        WHEN COALESCE(SUM(CASE WHEN "invoices"."status" IN ('sent', 'overdue') AND "invoices"."deleted_at" IS NULL THEN 1 ELSE 0 END), 0) > 0 THEN 'medium'
+        ELSE 'low'
+      END as "risk_level" from "clients" left join "projects" on "projects"."client_id" = "clients"."id" left join "invoices" on "invoices"."client_id" = "clients"."id" where "clients"."deleted_at" is null group by "clients"."id", "clients"."owner_id", "clients"."name");

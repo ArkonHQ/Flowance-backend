@@ -50,6 +50,13 @@
       "when": 1778491834924,
       "tag": "0006_tidy_groot",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1778698847333,
+      "tag": "0007_solid_nitro",
+      "breakpoints": true
     }
   ]
 }

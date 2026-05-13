@@ -11,5 +11,5 @@ export const clients = pgTable('clients', {
     .notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-  deletedAt: timestamp("delete_at"),
+  deletedAt: timestamp("deleted_at"),
 });

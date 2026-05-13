@@ -1,5 +1,5 @@
 import { pgMaterializedView } from 'drizzle-orm/pg-core';
-import { sql, eq } from 'drizzle-orm';
+import { sql, eq, isNull } from 'drizzle-orm';
 import { clients, projects, invoices } from '../tables';
 
 export const clientInsightsMv = pgMaterializedView('client_insights_mv').as((qb) => {
@@ -8,18 +8,19 @@ export const clientInsightsMv = pgMaterializedView('client_insights_mv').as((qb)
       id: clients.id,
       ownerId: clients.ownerId,
       name: clients.name,
-      totalProjects: sql<number>`count(distinct ${projects.id})::int`.as('total_projects'),
-      totalEarned: sql<number>`coalesce(sum(case when ${invoices.status} = 'paid' then ${invoices.amount} else 0 end), 0)`.as('total_earned'),
-      unpaidAmount: sql<number>`coalesce(sum(case when ${invoices.status} in ('sent', 'overdue') then ${invoices.amount} else 0 end), 0)`.as('unpaid_amount'),
-      avgPaymentDelayDays: sql<number>`coalesce(round(avg(case when ${invoices.status} = 'paid' then extract(epoch from (${invoices.paidAt} - ${invoices.dueDate})) / 86400 end)::numeric, 2), 0)`.as('avg_payment_delay_days'),
-      riskLevel: sql<string>`case
-        when coalesce(avg(case when ${invoices.status} = 'paid' then extract(epoch from (${invoices.paidAt} - ${invoices.dueDate})) / 86400 end), 0) > 30 then 'high'
-        when coalesce(sum(case when ${invoices.status} in ('sent', 'overdue') then 1 else 0 end), 0) > 0 then 'medium'
-        else 'low'
-      end`.as('risk_level')
+      totalProjects: sql<number>`COUNT(DISTINCT CASE WHEN ${projects.deletedAt} IS NULL THEN ${projects.id} END)::int`.as('total_projects'),
+      totalEarned: sql<number>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'paid' AND ${invoices.deletedAt} IS NULL THEN ${invoices.amount} ELSE 0 END), 0)`.as('total_earned'),
+      unpaidAmount: sql<number>`COALESCE(SUM(CASE WHEN ${invoices.status} IN ('sent', 'overdue') AND ${invoices.deletedAt} IS NULL THEN ${invoices.amount} ELSE 0 END), 0)`.as('unpaid_amount'),
+      avgPaymentDelayDays: sql<number>`COALESCE(ROUND(AVG(CASE WHEN ${invoices.status} = 'paid' AND ${invoices.deletedAt} IS NULL THEN EXTRACT(EPOCH FROM (${invoices.paidAt} - ${invoices.dueDate})) / 86400 END)::numeric, 2), 0)`.as('avg_payment_delay_days'),
+      riskLevel: sql<string>`CASE
+        WHEN COALESCE(AVG(CASE WHEN ${invoices.status} = 'paid' AND ${invoices.deletedAt} IS NULL THEN EXTRACT(EPOCH FROM (${invoices.paidAt} - ${invoices.dueDate})) / 86400 END), 0) > 30 THEN 'high'
+        WHEN COALESCE(SUM(CASE WHEN ${invoices.status} IN ('sent', 'overdue') AND ${invoices.deletedAt} IS NULL THEN 1 ELSE 0 END), 0) > 0 THEN 'medium'
+        ELSE 'low'
+      END`.as('risk_level')
     })
     .from(clients)
     .leftJoin(projects, eq(projects.clientId, clients.id))
     .leftJoin(invoices, eq(invoices.clientId, clients.id))
+    .where(isNull(clients.deletedAt))
     .groupBy(clients.id, clients.ownerId, clients.name);
 });

@@ -1,6 +1,6 @@
 import { db } from '../config/db'
 import { clients, projects, invoices, tasks } from '../db/schema';
-import { eq, isNull  } from 'drizzle-orm';
+import { eq, isNull, sql  } from 'drizzle-orm';
 
 
 // Soft delete a client 
@@ -26,6 +26,7 @@ export const softDeleteClient = async (clientId: number, cascade: boolean = true
 
     }
 
+    await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY client_insights_mv`)
 }
 
 // Restore a client 
@@ -46,6 +47,5 @@ export const restoreDeletedClient = async (clientId: number, cascade: boolean = 
             .where(eq(invoices.clientId, clientId) )
     }
 
-
-
+    await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY client_insights_mv`)
 }
