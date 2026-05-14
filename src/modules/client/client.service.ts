@@ -3,6 +3,8 @@ import { db } from '../../config/db';
 import { clients, projects, invoices } from '../../db/schema';
 import { softDeleteClient } from '../../lib/soft-delete';
 import { restoreDeletedClient } from '../../lib/soft-delete';
+import { clientInsightsMv } from '../../db/schema/views/client-insights-mv';
+import { StatusCodes } from 'http-status-codes';
 
 
 export const clientService = {
@@ -32,6 +34,20 @@ export const clientService = {
             )
         )
     return client;
+    },
+
+    // Get client insights by ID
+    async getClientInsight(req: any, res: any) {
+        const clientId = parseInt(req.params.id)
+
+        const  insight = await db
+            .select()
+            .from(clientInsightsMv)
+            .where(eq(clientInsightsMv.id, clientId))
+            .then (rows => rows[0])
+        if (!insight) return res.status(StatusCodes.NOT_FOUND).json({error: 'Insight not found'})
+        
+        res.json({ insight })
     },
 
     // Create a new client

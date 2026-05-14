@@ -1,12 +1,12 @@
 import { Router } from "express";
 import * as taskController from "./task.controller";
-import authMiddleware from "../../middleware/auth.middleware";
+import { requireAuth } from "../../middleware/auth.middleware";
 import { validate } from "../../middleware/validate.middleware";
 import { createTaskSchema, updateTaskSchema } from "./task.schema";
 
 const router = Router();
 
-router.use(authMiddleware);
+router.use(requireAuth);
 
 router.get("/", taskController.getAllTasks);
 router.get("/:id", taskController.getOneTask);

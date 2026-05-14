@@ -1,4 +1,5 @@
 import express from 'express';
+import { toNodeHandler } from "better-auth/node";
 import helmet from 'helmet';
 import cors from 'cors';
 import authRoute from './modules/auth/auth.routes';
@@ -7,25 +8,28 @@ import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import invoiceRoute from "./modules/invoice/invoice.routes";
 import projectRoute from "./modules/project/project.routes";
 import taskRouter from "./modules/task/task.routes";
+import { auth } from './lib/auth';
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:3000',
+    credentials: true,
+}));
 app.use(express.json({ limit: '10kb' }));
 app.use(helmet());
 
+app.use('/api/auth', toNodeHandler(auth.handler));
 
-app.use('/api/v1/auth', authRoute);
+app.use('/api/clients', clientRouter);
 
-app.use('/api/v1/clients', clientRouter);
+app.use('/api/dashboard', dashboardRoutes);
 
-app.use('/api/v1/dashboard', dashboardRoutes);
+app.use('/api/invoice', invoiceRoute);
 
-app.use('/api/v1/invoice', invoiceRoute);
+app.use('/api/projects', projectRoute);
 
-app.use('/api/v1/projects', projectRoute);
-
-app.use('/api/v1/tasks', taskRouter);
+app.use('/api/tasks', taskRouter);
 
 app.get('/health', (_req: any, res: any) => {
     res.status(200).json({ status: 'OK' });

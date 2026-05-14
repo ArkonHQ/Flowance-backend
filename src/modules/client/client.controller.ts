@@ -36,6 +36,24 @@ export const getClient = asyncHandler(async (req: any, res: Response) => {
     });
 });
 
+
+export const getClientInsight = asyncHandler(async(req: any, res: Response) => {
+    const insight = await clientService.getClientInsight(parseInt(req.params.id), req.user.id)
+
+    if (!insight) {
+        return res.status(StatusCodes.NOT_FOUND).json({
+            success: false,
+            message: 'Insight not found'
+        });
+    }
+
+    return res.status(StatusCodes.OK).json({
+        success: true,
+        insight
+    })
+})
+
+
 export const createClient = asyncHandler(async (req: any, res: Response) => {
     const newClient = await clientService.createClient({
         ...req.body,

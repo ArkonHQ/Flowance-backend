@@ -3,7 +3,7 @@ import { db } from '../../config/db';
 import { projects } from '../../db/schema';
 import { CreateProjectInput, UpdateProjectInput } from './project.schema';
 
-export const getProjectsByOwner = async (ownerId: string) => {
+export const getProjectsByOwner = async (ownerId: number) => {
     return db
         .select()
         .from(projects)
@@ -18,7 +18,7 @@ export const getProjectById = async (id: number) => {
     return result[0];
 };
 
-export const createProject = async (ownerId: string, data: CreateProjectInput) => {
+export const createProject = async (ownerId: number, data: CreateProjectInput) => {
     const [newProject] = await db
         .insert(projects)
         .values({

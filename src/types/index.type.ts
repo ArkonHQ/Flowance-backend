@@ -1,4 +1,5 @@
 import { users, projects, tasks, clients, invoices } from "../db/schema";
+import { clientInsightsMv } from "../db/schema/views/client-insights-mv";
 
 
 export type User = typeof users.$inferSelect
@@ -11,6 +12,7 @@ export type Task = typeof tasks.$inferSelect
 export type NewTask = typeof tasks.$inferInsert
 export type Invoice = typeof invoices.$inferSelect
 export type NewInvoice = typeof invoices.$inferInsert
+export type ClientInsight = typeof clientInsightsMv.$inferSelect
 
 
 export type SafeUser = Omit<User, 'password'>

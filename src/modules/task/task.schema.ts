@@ -15,6 +15,7 @@ export const createTaskSchema = z.object({
     priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().default('medium'),
     deadline: optionalDate,
     projectId: z.number(),
+    deletedAt: optionalDate,
 });
 
 export const updateTaskSchema = z.object({
@@ -23,6 +24,7 @@ export const updateTaskSchema = z.object({
     priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
     deadline: optionalDate,
     projectId: z.number().optional(),
+    deletedAt: optionalDate,
 });
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;

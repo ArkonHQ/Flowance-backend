@@ -1,12 +1,12 @@
 import { Router } from "express";
 import * as dashboardController from "./dashboard.controller";
-import authMiddleware from "../../middleware/auth.middleware";
+import { requireAuth } from "../../middleware/auth.middleware";
 import { validate } from "../../middleware/validate.middleware";
 import { earningsQuerySchema } from "./dashboard.schema";
 
 const router = Router();
 
-router.use(authMiddleware);
+router.use(requireAuth);
 
 router.get("/active-tasks", dashboardController.activeTasks);
 router.get('/completed-tasks', dashboardController.completedTasks);

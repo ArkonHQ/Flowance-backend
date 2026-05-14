@@ -1,28 +1,24 @@
-import { betterAuth } from "better-auth";
-import { db } from "../config/db";
-import { users, session, account, verification } from "../db/schema";
-import { z } from 'zod';
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { betterAuth } from 'better-auth';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { db } from '../config/db';
+import { user, session, account, verification } from "../db/schema"
 
 export const auth = betterAuth({
-    database: drizzleAdapter(db, {
-        provider: "pg",
-        schema: {
-            user: users,
-            session,
-            account,
-            verification,
-        },
-    }),
-    emailAndPassword: {
-        enabled: true,
-        schema: z.object({
-            email: z.string().email("Invalid email address"),
-            password: z
-                .string()
-                .min(8, 'Password must be at least 8 characters')
-        })
+    baseURL: process.env.BETTER_AUTH_URL,
+    trustedOrigins: ["http://localhost:3000"],
+  database: drizzleAdapter(db, {
+    provider: 'pg',
+    schema: {
+      user: user,
+      session: session,
+      account: account,
+      verification: verification,
     },
+  }),
+  emailAndPassword: { enabled: true },
+
 });
 
 export type Auth = typeof auth;
+
+    

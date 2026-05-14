@@ -1,12 +1,13 @@
-import { db } from '../src/config/db'
-import { sql } from 'drizzle-orm'
+// scripts/test-refresh.ts
+import { db } from '../src/config/db';
+import { sql } from 'drizzle-orm';
 
-
-const fixError = async () => {
-
-    await db.execute (sql` DROP MATERIALIZED VIEW IF EXISTS client_insights_mv CASCADE; `)
-
-    console.log("Unique index added successfully!")
+async function test() {
+  console.log('Refreshing view...');
+  await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY client_insights_mv`);
+  console.log('Refresh done. Fetching first row...');
+  const result = await db.execute(sql`SELECT * FROM client_insights_mv LIMIT 1`);
+  console.log('Sample:', result.rows[0]);
 }
 
-fixError()
+test();

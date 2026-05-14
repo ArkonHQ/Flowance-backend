@@ -6,6 +6,7 @@ export const createInvoiceSchema = z.object({
     dueDate: z.string().optional().nullable(),
     clientId: z.number(),
     projectId: z.number().optional().nullable(),
+    deletedAt: z.string().datetime().optional().nullable(),
 });
 
 export const updateInvoiceSchema = z.object({
@@ -13,6 +14,7 @@ export const updateInvoiceSchema = z.object({
     status: z.enum(['draft', 'sent', 'paid', 'overdue', 'cancelled']).optional(),
     dueDate: z.string().optional().nullable(),
     paidAt: z.string().optional().nullable(),
+    deletedAt: z.string().datetime().optional().nullable(),
 });
 
 export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>;

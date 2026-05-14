@@ -1,19 +1,13 @@
-import { Router } from "express";
-import * as clientController from "./client.controller";
-import authMiddleware from "../../middleware/auth.middleware";
-import { validate } from "../../middleware/validate.middleware";
-import { createClientSchema, updateClientSchema } from "./client.schema";
-
+import { Router } from "express"
+import { requireAuth } from "../../middleware/auth.middleware"
+import * as clientController from "./client.controller"
 
 const router = Router();
 
-router.use(authMiddleware);
-
-router.get('/', clientController.getClients);
-router.get('/:id', clientController.getClient);
-router.post('/', validate(createClientSchema), clientController.createClient);
-router.put('/:id', validate(updateClientSchema), clientController.updateClient);
-router.delete('/:id', clientController.deleteClient);
-router.post('/:id/restore', clientController.restoreClient) 
+router.get("/",  clientController.getClients);
+router.get("/:id", requireAuth, clientController.getClient);
+router.post("/", requireAuth, clientController.createClient);
+router.put("/:id", requireAuth, clientController.updateClient);
+router.delete("/:id", requireAuth, clientController.deleteClient);
 
 export default router;

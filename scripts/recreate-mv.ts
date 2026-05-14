@@ -32,18 +32,18 @@ async function recreateView() {
       GROUP BY c.id, c.owner_id, c.name;
     `);
     
-    console.log('✅ Success: Materialized view recreated.');
+    console.log(' Success: Materialized view recreated.');
     
     // 3. Add the unique index on the new 'id' column
-    console.log('⚡ Adding unique index on "id"...');
+    console.log(' Adding unique index on "id"...');
     await db.execute(sql`
       CREATE UNIQUE INDEX idx_client_insights_mv_id ON client_insights_mv (id);
     `);
     
-    console.log('✅ Success: Unique index added.');
-    console.log('💡 The view is now ready for CONCURRENTLY refreshes.');
+    console.log(' Success: Unique index added.');
+    console.log(' The view is now ready for CONCURRENTLY refreshes.');
   } catch (error) {
-    console.error('❌ Error recreating view:');
+    console.error('Error recreating view:');
     console.error(error);
     process.exit(1);
   }

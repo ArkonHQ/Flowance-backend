@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import * as invoiceController from './invoice.controller';
-import authMiddleware from "../../middleware/auth.middleware";
+import { requireAuth } from "../../middleware/auth.middleware";
 import { validate } from "../../middleware/validate.middleware";
 import { createInvoiceSchema, updateInvoiceSchema } from "./invoice.schema";
 
 const router = Router();
 
-router.use(authMiddleware);
+router.use(requireAuth);
 
 router.get('/', invoiceController.getAllInvoices);
 router.get('/:id', invoiceController.getOneInvoice);

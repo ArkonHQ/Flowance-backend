@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { index, integer, numeric, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 import { invoiceStatusEnum } from "../enums";
 import { clients } from "./clients";
@@ -22,8 +23,9 @@ export const invoices = pgTable('invoices', {
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
     deletedAt: timestamp("deleted_at"),
 }, (table) => ({
-    // Indexes go here
+    clientIdx: index('idx_invoice_client_id')
+        .on(table.clientId),
     clientStatusIdx: index('idx_invoice_client_id_status')
-        .on(table.clientId, table.status)
-        .concurrently(),
+        .on(table.clientId, table.status),
+    paidDatesIdx: index('idx_invoices_paid_at_partial').on(table.clientId, table.paidAt, table.dueDate).where(sql`status = 'paid'`)
 }));

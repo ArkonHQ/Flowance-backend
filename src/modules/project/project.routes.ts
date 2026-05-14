@@ -1,12 +1,12 @@
 import { Router } from "express";
 import * as projectController from "./project.controller";
-import authMiddleware from "../../middleware/auth.middleware";
+import { requireAuth } from "../../middleware/auth.middleware";
 import { validate } from "../../middleware/validate.middleware";
 import { createProjectSchema, updateProjectSchema } from "./project.schema";
 
 const router = Router();
 
-router.use(authMiddleware);
+router.use(requireAuth);
 
 router.get("/", projectController.getAllProjects);
 router.get("/:id", projectController.getOneProject);
