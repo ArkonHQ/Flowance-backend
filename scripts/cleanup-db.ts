@@ -24,8 +24,8 @@ async function cleanup() {
     for (const table of tables) {
       console.log(`  Processing ${table.name}...`);
       await db.update(table.schema)
-        .set({ ownerId: 1 })
-        .where(ne(table.schema.ownerId, 1));
+        .set({ ownerId: "1" })
+        .where(ne(table.schema.ownerId, "1"));
     }
 
     console.log('Cleanup complete!');

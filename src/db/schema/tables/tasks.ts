@@ -1,7 +1,7 @@
 import { integer, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
 import { priorityEnum, taskStatusEnum } from '../enums';
 import { projects } from './projects';
-import { users } from './users';
+import { betterAuthUser } from './auth';
 
 export const tasks = pgTable('tasks', {
   id: serial('id').primaryKey(),
@@ -13,8 +13,8 @@ export const tasks = pgTable('tasks', {
   projectId: integer('project_id')
     .references(() => projects.id, { onDelete: 'cascade' })
     .notNull(),
-  ownerId: integer('owner_id')
-    .references(() => users.id, { onDelete: 'cascade' })
+  ownerId: text('owner_id')
+    .references(() => betterAuthUser.id, { onDelete: 'cascade' })
     .notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

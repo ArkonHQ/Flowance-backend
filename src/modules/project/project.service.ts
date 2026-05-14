@@ -3,7 +3,7 @@ import { db } from '../../config/db';
 import { projects } from '../../db/schema';
 import { CreateProjectInput, UpdateProjectInput } from './project.schema';
 
-export const getProjectsByOwner = async (ownerId: number) => {
+export const getProjectsByOwner = async (ownerId: string) => {
     return db
         .select()
         .from(projects)
@@ -18,7 +18,7 @@ export const getProjectById = async (id: number) => {
     return result[0];
 };
 
-export const createProject = async (ownerId: number, data: CreateProjectInput) => {
+export const createProject = async (ownerId: string, data: CreateProjectInput) => {
     const [newProject] = await db
         .insert(projects)
         .values({
@@ -26,7 +26,7 @@ export const createProject = async (ownerId: number, data: CreateProjectInput) =
             description: data.description || null,
             status: data.status || 'planning',
             deadline: data.deadline ? new Date(data.deadline) : null,
-            budget: data.budget || null,
+            budget: data.budget ? data.budget.toString() : null,
             clientId: data.clientId,
             ownerId: ownerId,
         })

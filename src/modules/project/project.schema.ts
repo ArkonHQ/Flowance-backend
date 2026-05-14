@@ -7,6 +7,7 @@ export const createProjectSchema = z.object({
     deadline: z.string().optional().nullable(),
     budget: z.union([z.string(), z.number()]).optional().nullable(),
     clientId: z.number(),
+    ownerId: z.string().optional(),
     deletedAt: z.string().datetime().optional().nullable(),
 });
 

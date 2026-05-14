@@ -4,7 +4,7 @@ import * as clientController from "./client.controller"
 
 const router = Router();
 
-router.get("/",  clientController.getClients);
+router.get("/",  requireAuth, clientController.getClients);
 router.get("/:id", requireAuth, clientController.getClient);
 router.post("/", requireAuth, clientController.createClient);
 router.put("/:id", requireAuth, clientController.updateClient);

@@ -2,7 +2,7 @@ import { db } from '../../config/db';
 import { tasks, projects, invoices } from '../../db/schema';
 import { eq, and, lt, ne, gte, sql } from 'drizzle-orm';
 
-export const getActiveTasks = async (ownerId: number) => {
+export const getActiveTasks = async (ownerId: string) => {
     return db
         .select({
             id: tasks.id,
@@ -23,7 +23,7 @@ export const getActiveTasks = async (ownerId: number) => {
         .orderBy(tasks.deadline);
 };
 
-export const getCompletedTasks = async (ownerId: number, sinceDate: Date) => {
+export const getCompletedTasks = async (ownerId: string, sinceDate: Date) => {
     return db
         .select({
             id: tasks.id,
@@ -44,7 +44,7 @@ export const getCompletedTasks = async (ownerId: number, sinceDate: Date) => {
         .orderBy(sql`${tasks.completedAt} DESC`);
 };
 
-export const getDelayedTasks = async (ownerId: number) => {
+export const getDelayedTasks = async (ownerId: string) => {
     return db
         .select({
             id: tasks.id,
@@ -65,7 +65,7 @@ export const getDelayedTasks = async (ownerId: number) => {
         .orderBy(tasks.deadline);
 };
 
-export const getEarnings = async (ownerId: number, startDate?: Date) => {
+export const getEarnings = async (ownerId: string, startDate?: Date) => {
     let conditions = [
         eq(invoices.ownerId, ownerId),
         eq(invoices.status, 'paid')

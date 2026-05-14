@@ -10,7 +10,7 @@ import { StatusCodes } from 'http-status-codes';
 export const clientService = {
 
     // Get all active clients for a specific user
-    async getActiveClients(ownerId: number) {
+    async getActiveClients(ownerId: string) {
         return await db
             .select()
             .from(clients)
@@ -23,7 +23,7 @@ export const clientService = {
     },
 
     // Get a single active client with details and statistics by ID
-    async getActiveClientById(clientId: number, ownerId: number) {
+    async getActiveClientById(clientId: number, ownerId: string) {
       const [client] = await db
         .select()
         .from(clients)
@@ -51,7 +51,7 @@ export const clientService = {
     },
 
     // Create a new client
-    async createClient(data: {name: string; email?: string; company?: string; ownerId: number;  }) {
+    async createClient(data: {name: string; email?: string; company?: string; ownerId: string;  }) {
         const [newClient] = await db
             .insert(clients)
             .values({
@@ -68,7 +68,7 @@ export const clientService = {
     },
 
     // Update an existing client
-    async updateClient(clientId: number, ownerId: number, data: Partial<{name: string; email?: string; company?: string;   }>) {
+    async updateClient(clientId: number, ownerId: string, data: Partial<{name: string; email?: string; company?: string;   }>) {
         const [updated] = await db
             .update(clients)
             .set({ ...data, updatedAt: new Date() })
@@ -84,7 +84,7 @@ export const clientService = {
     },
 
     // soft delete a client (cascade to projects/invoices)
-    async deleteClient(clientId: number, ownerId: number) {
+    async deleteClient(clientId: number, ownerId: string) {
         
         // Verify if client belongs to the owner
         const client = await this.getActiveClientById(clientId, ownerId)
@@ -96,7 +96,7 @@ export const clientService = {
     },
 
     // Restore client (cascade restore projects/invoices)
-    async restoreClient(clientId: number, ownerId: number) {
+    async restoreClient(clientId: number, ownerId: string) {
 
         const [client] = await db
             .select()

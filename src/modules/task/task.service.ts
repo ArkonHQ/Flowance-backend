@@ -3,7 +3,7 @@ import { db } from '../../config/db';
 import { tasks } from '../../db/schema';
 import { CreateTaskInput, UpdateTaskInput } from './task.schema';
 
-export const getTasksByOwner = async (ownerId: number, projectId?: number) => {
+export const getTasksByOwner = async (ownerId: string, projectId?: number) => {
     let conditions = [eq(tasks.ownerId, ownerId)];
 
     if (projectId) {
@@ -16,7 +16,7 @@ export const getTasksByOwner = async (ownerId: number, projectId?: number) => {
         .where(and(...conditions));
 };
 
-export const getTaskById = async (id: number, ownerId: number) => {
+export const getTaskById = async (id: number, ownerId: string) => {
     const result = await db
         .select()
         .from(tasks)
@@ -24,7 +24,7 @@ export const getTaskById = async (id: number, ownerId: number) => {
     return result[0];
 };
 
-export const createTask = async (ownerId: number, data: CreateTaskInput) => {
+export const createTask = async (ownerId: string, data: CreateTaskInput) => {
     const [newTask] = await db
         .insert(tasks)
         .values({

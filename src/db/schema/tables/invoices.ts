@@ -1,9 +1,9 @@
 import { sql } from "drizzle-orm";
-import { index, integer, numeric, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { index, integer, numeric, pgTable, serial, timestamp, text } from "drizzle-orm/pg-core";
 import { invoiceStatusEnum } from "../enums";
 import { clients } from "./clients";
 import { projects } from "./projects";
-import { users } from "./users";
+import { betterAuthUser } from "./auth";
 
 export const invoices = pgTable('invoices', {
     id: serial('id').primaryKey(),
@@ -16,8 +16,8 @@ export const invoices = pgTable('invoices', {
         .notNull(),
     projectId: integer('project_id')
         .references(() => projects.id, { onDelete: 'cascade' }),
-    ownerId: integer('owner_id')
-        .references(() => users.id, { onDelete: 'cascade' })
+    ownerId: text('owner_id')
+        .references(() => betterAuthUser.id, { onDelete: 'cascade' })
         .notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),

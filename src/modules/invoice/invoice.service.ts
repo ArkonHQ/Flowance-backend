@@ -3,7 +3,7 @@ import { db } from '../../config/db';
 import { invoices } from '../../db/schema';
 import { CreateInvoiceInput, UpdateInvoiceInput } from './invoice.schema';
 
-export const getInvoicesByOwner = async (ownerId: number) => {
+export const getInvoicesByOwner = async (ownerId: string) => {
     return db
         .select()
         .from(invoices)
@@ -18,7 +18,7 @@ export const getInvoiceById = async (id: number) => {
     return result[0];
 };
 
-export const createInvoice = async (ownerId: number, data: CreateInvoiceInput) => {
+export const createInvoice = async (ownerId: string, data: CreateInvoiceInput) => {
     const [newInvoice] = await db
         .insert(invoices)
         .values({

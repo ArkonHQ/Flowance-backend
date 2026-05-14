@@ -7,6 +7,7 @@ export const createInvoiceSchema = z.object({
     clientId: z.number(),
     projectId: z.number().optional().nullable(),
     deletedAt: z.string().datetime().optional().nullable(),
+    ownerId: z.string().optional(),
 });
 
 export const updateInvoiceSchema = z.object({
