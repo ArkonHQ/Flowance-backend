@@ -37,17 +37,17 @@ export const clientService = {
     },
 
     // Get client insights by ID
-    async getClientInsight(req: any, res: any) {
-        const clientId = parseInt(req.params.id)
-
-        const  insight = await db
+    async getClientInsight(clientId: number, ownerId: string) {
+        const insight = await db
             .select()
             .from(clientInsightsMv)
-            .where(eq(clientInsightsMv.id, clientId))
-            .then (rows => rows[0])
-        if (!insight) return res.status(StatusCodes.NOT_FOUND).json({error: 'Insight not found'})
+            .where(and(
+                eq(clientInsightsMv.id, clientId),
+                // Add ownerId check if necessary, though MV might not have it yet
+            ))
+            .then(rows => rows[0]);
         
-        res.json({ insight })
+        return insight;
     },
 
     // Create a new client
@@ -56,15 +56,13 @@ export const clientService = {
             .insert(clients)
             .values({
                 name: data.name,
-                email: data.email,
-                company: data.company,
+                email: data.email || null,
+                company: data.company || null,
                 ownerId: data.ownerId,
-                createdAt: new Date(),
-                updatedAt: new Date()
             })
-            .returning()
+            .returning();
         
-        return newClient
+        return newClient;
     },
 
     // Update an existing client

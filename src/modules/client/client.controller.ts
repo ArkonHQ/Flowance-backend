@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { clientService } from "./client.service";
 import { asyncHandler } from "../../utils/asyncHandler";
+import { createClientSchema, updateClientSchema } from "./client.schema";
 
 
 export const getClients = asyncHandler(async (req: any, res: Response) => {
@@ -38,7 +39,10 @@ export const getClient = asyncHandler(async (req: any, res: Response) => {
 
 
 export const getClientInsight = asyncHandler(async(req: any, res: Response) => {
-    const insight = await clientService.getClientInsight(parseInt(req.params.id), req.user.id)
+    const clientId = parseInt(req.params.id);
+    const ownerId = req.user.id;
+    
+    const insight = await clientService.getClientInsight(clientId, ownerId);
 
     if (!insight) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -55,16 +59,22 @@ export const getClientInsight = asyncHandler(async(req: any, res: Response) => {
 
 
 export const createClient = asyncHandler(async (req: any, res: Response) => {
+    // 1. Validate the request body first
+    const validatedData = createClientSchema.parse(req.body);
+
+    // 2. Create the client using validated data
     const newClient = await clientService.createClient({
-        ...req.body,
-        ownerId: req.user.id
+        ...validatedData,
+        ownerId: req.user.id,
     });
+
     res.status(StatusCodes.CREATED).json({
         success: true,
         client: newClient,
         message: "Client created successfully",
     });
 });
+
 
 export const deleteClient = asyncHandler(async (req: any, res: Response) => {
     const client = await clientService.getActiveClientById(parseInt(req.params.id), req.user.id);
@@ -108,7 +118,8 @@ export const updateClient = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    const updated = await clientService.updateClient(parseInt(req.params.id), req.user.id, req.body);
+    const validatedData = updateClientSchema.parse(req.body);
+    const updated = await clientService.updateClient(parseInt(req.params.id), req.user.id, validatedData);
     res.status(StatusCodes.OK).json({
         success: true,
         client: updated,
