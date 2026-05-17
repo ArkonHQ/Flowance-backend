@@ -25,7 +25,7 @@ export const betterAuthAccount = pgTable('better_auth_account', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => betterAuthUser.id),
   providerId: text('provider_id').notNull(),
-  accountId: text('provider_account_id').notNull(),
+  providerAccountId: text('provider_account_id').notNull(),
   accessToken: text('access_token'),
   refreshToken: text('refresh_token'),
   idToken: text('id_token'),

@@ -16,7 +16,20 @@ export const clientInsightsMv = pgMaterializedView('client_insights_mv').as((qb)
         WHEN COALESCE(AVG(CASE WHEN ${invoices.status} = 'paid' AND ${invoices.deletedAt} IS NULL THEN EXTRACT(EPOCH FROM (${invoices.paidAt} - ${invoices.dueDate})) / 86400 END), 0) > 30 THEN 'high'
         WHEN COALESCE(SUM(CASE WHEN ${invoices.status} IN ('sent', 'overdue') AND ${invoices.deletedAt} IS NULL THEN 1 ELSE 0 END), 0) > 0 THEN 'medium'
         ELSE 'low'
-      END`.as('risk_level')
+      END`.as('risk_level'),
+      lastActivity: sql<Date>`MAX(
+      GREATEST(
+        COALESCE(${projects.updatedAt}, '1970-01-01'),
+        COALESCE(${invoices.createdAt}, '1970-01-01'),
+      )`.as('last_activity'),
+      status: sql<string>`CASE 
+        WHEN COALESCE(SUM(CASE WHEN ${invoices.status} = 'paid' AND ${invoices.deletedAt} IS NULL THEN ${invoices.amount} ELSE 0 END), 0) > 10000
+        THEN 'VIP'
+        WHEN COALESCE(AVG(CASE WHEN ${invoices.status} = 'paid' THEN EXTRACT(EPOCH FROM (${invoices.paidAt} - ${invoices.dueDate})) / 86400 END), 0) > 30
+        OR COALESCE (SUM(CASE WHEN ${invoices.status} IN ('snet', 'overdue') THEN 1 ELSE 0 END), 0) > 0 THEN 'At Risk'
+        WHEN MAX (${invoices.createdAt}) < NOW() - INTERVAL '3 months'
+        THEN 'Inactive' ELSE 'Active'
+        END`.as('status')
     })
     .from(clients)
     .leftJoin(projects, eq(projects.clientId, clients.id))
