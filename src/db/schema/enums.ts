@@ -16,3 +16,7 @@ export const invoiceStatusEnum = pgEnum('invoice_status', [
   'draft', 'sent', 'paid', 'overdue', 'cancelled'
 ])
 
+export const clientStatusEnum = pgEnum('client_status', [
+  'active', 'at_risk', 'inactive', 'vip'
+])
+
