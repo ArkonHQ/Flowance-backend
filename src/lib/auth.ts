@@ -5,7 +5,7 @@ import { user, session, account, verification } from "../db/schema"
 
 export const auth = betterAuth({
     baseURL: process.env.BETTER_AUTH_URL,
-    trustedOrigins: ["http://localhost:3000"],
+    trustedOrigins: ["http://localhost:3000", "http://localhost:3001"],
   database: drizzleAdapter(db, {
     provider: 'pg',
     schema: {
@@ -16,7 +16,10 @@ export const auth = betterAuth({
     },
   }),
   emailAndPassword: { enabled: true },
-
+  cookie: {
+    // Enable cross-port cookie sharing on localhost
+    domain: "localhost",
+  },
 });
 
 export type Auth = typeof auth;

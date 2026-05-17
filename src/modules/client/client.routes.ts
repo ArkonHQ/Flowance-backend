@@ -4,6 +4,8 @@ import * as clientController from "./client.controller"
 
 const router = Router();
 
+router.get("/insights", requireAuth, clientController.getClientInsight);
+router.get("/:id/insights", requireAuth, clientController.getClientInsight);
 router.get("/",  requireAuth, clientController.getClients);
 router.get("/:id", requireAuth, clientController.getClient);
 router.post("/", requireAuth, clientController.createClient);

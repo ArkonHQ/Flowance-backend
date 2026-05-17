@@ -36,14 +36,23 @@ export const clientService = {
     return client;
     },
 
-    // Get client insights by ID
-    async getClientInsight(clientId: number, ownerId: string) {
+    // Get client insights by ID or all active client insights for the owner
+    async getClientInsight(clientId: number | undefined, ownerId: string) {
+        if (clientId === undefined || isNaN(clientId)) {
+            // Get all insights for this owner
+            return await db
+                .select()
+                .from(clientInsightsMv)
+                .where(eq(clientInsightsMv.ownerId, ownerId));
+        }
+
+        // Get single insight secure by ownerId
         const insight = await db
             .select()
             .from(clientInsightsMv)
             .where(and(
                 eq(clientInsightsMv.id, clientId),
-                // Add ownerId check if necessary, though MV might not have it yet
+                eq(clientInsightsMv.ownerId, ownerId)
             ))
             .then(rows => rows[0]);
         
