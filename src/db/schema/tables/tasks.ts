@@ -2,6 +2,7 @@ import { integer, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
 import { priorityEnum, taskStatusEnum } from '../enums';
 import { projects } from './projects';
 import { betterAuthUser } from './auth';
+import { users } from './users';
 
 export const tasks = pgTable('tasks', {
   id: serial('id').primaryKey(),
@@ -10,6 +11,8 @@ export const tasks = pgTable('tasks', {
   priority: priorityEnum('priority').default('medium').notNull(),
   deadline: timestamp('deadline'),
   completedAt: timestamp('completed_at'),
+  assignedTo: integer('assigned_to')
+    .references(() => users.id, { onDelete: 'set null' }),
   projectId: integer('project_id')
     .references(() => projects.id, { onDelete: 'cascade' })
     .notNull(),

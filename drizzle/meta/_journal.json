@@ -64,6 +64,13 @@
       "when": 1779027148166,
       "tag": "0008_strong_namorita",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1779310110265,
+      "tag": "0009_even_johnny_storm",
+      "breakpoints": true
     }
   ]
 }

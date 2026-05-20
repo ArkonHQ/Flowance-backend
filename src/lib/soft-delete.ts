@@ -1,6 +1,6 @@
 import { db } from '../config/db'
 import { clients, projects, invoices, tasks } from '../db/schema';
-import { eq, isNull, sql  } from 'drizzle-orm';
+import { eq, sql  } from 'drizzle-orm';
 
 
 // Soft delete a client 
@@ -22,7 +22,7 @@ export const softDeleteClient = async (clientId: number, cascade: boolean = true
         // soft delete all invoices of this client
         await db.update(invoices)
             .set({ deletedAt:now, updatedAt: now})
-            .where(eq(invoices.clientId, clientId) )
+            .where(eq(invoices.clientId, clientId))
 
     }
 

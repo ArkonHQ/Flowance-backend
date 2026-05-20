@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import * as dashboardService from "./dashboard.service";
 import { asyncHandler } from "../../utils/asyncHandler";
 
+
 export const activeTasks = asyncHandler(async (req: any, res: Response) => {
     const result = await dashboardService.getActiveTasks(req.user.id);
     res.status(StatusCodes.OK).json({
@@ -71,3 +72,12 @@ export const getEarnings = asyncHandler(async (req: any, res: Response) => {
         count: Number(data.count) || 0,
     });
 });
+
+export const getMonthlyHealth = asyncHandler(async (req: any, res: Response) => {
+    const matrics = await dashboardService.getMonthlyHealth(req, res);
+
+    res.status(StatusCodes.OK).json({
+        success: true,
+        data: matrics
+    })
+})
