@@ -78,10 +78,3 @@ export const deleteTask = asyncHandler(async (req: any, res: Response) => {
     });
 });
 
-export function stopTimer(arg0: string, stopTimer: any) {
-  throw new Error("Function not implemented.");
-}
-export function startTimer(arg0: string, startTimer: any) {
-  throw new Error("Function not implemented.");
-}
-

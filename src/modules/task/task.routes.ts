@@ -9,13 +9,13 @@ const router = Router();
 
 router.use(requireAuth);
 
+router.post("/timer/start", startTimer);
+router.post("/timer/stop", stopTimer);
+
 router.get("/", taskController.getAllTasks);
 router.get("/:id", taskController.getOneTask);
 router.post("/", validate(createTaskSchema), taskController.createTask);
 router.put("/:id", validate(updateTaskSchema), taskController.updateTask);
 router.delete("/:id", taskController.deleteTask);
-
-router.post("/timer/start", requireAuth, startTimer);
-router.post("/timer/stop", requireAuth, stopTimer);
 
 export default router;

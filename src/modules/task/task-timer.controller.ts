@@ -17,6 +17,11 @@ export const startTimer = asyncHandler(async (req: any, res: any) => {
 export const stopTimer = asyncHandler(async (req: any, res: any) => {
   const { taskId, startTime, endTime, description } = req.body
   const userId = req.user.id
+  const taskIdNumber = Number(taskId)
+
+  if (Number.isNaN(taskIdNumber)) {
+    return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: "Invalid task ID" })
+  }
 
   // Calculate hours
   const start = new Date(startTime)
@@ -43,10 +48,10 @@ export const stopTimer = asyncHandler(async (req: any, res: any) => {
     const [newEntry] = await db
       .insert(timeEntries)
       .values({
-        taskId,
+        taskId: taskIdNumber,
         userId,
-        hours,
-        description: description || `Worked on task ${taskId}`,
+        hours: hours.toFixed(2),
+        description: description || `Worked on task ${taskIdNumber}`,
         date: new Date()
       })
       .returning()

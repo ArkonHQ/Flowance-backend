@@ -2,7 +2,6 @@ import { Response } from "express";
 import { StatusCodes } from 'http-status-codes';
 import { asyncHandler } from "../../utils/asyncHandler";
 import { DashboardService } from "./dashboard.service";
-import { success } from "zod";
 
 
 export const getDashboard = asyncHandler(async (req: any, res: any) => {
@@ -19,24 +18,71 @@ export const getDashboard = asyncHandler(async (req: any, res: any) => {
         service.getUpcomingDeadlines(),
         service.getMostActiveMember(),
         service.getTeamWorkload(),
-        service.getTasksCompletedThisWeek()
+        service.getTasksCompletedThisWeek(),
+        service.getUnpaidAmount(),
     ])
+
+    const totalRevenue = Number(data[0]) || 0;
+    const activeProject = Number(data[1]) || 0;
+    const totalHours = Number(data[2]) || 0;
+    const pendingInvoices = Number(data[3]) || 0;
+    const projectProgress = (data[4] || []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        progress: Number(p.progress) || 0
+    }));
+    const recentActivity = data[5] || [];
+    const upcomingTasks = data[6] || [];
+    const atRiskProjects = data[7] || [];
+
+    // Map upcomingDeadlines { type, name, deadline } to { type, title, deadline }
+    const deadlines = (data[8] || []).map((d: any) => ({
+        type: d.type,
+        title: d.name,
+        deadline: d.deadline
+    }));
+
+    // Map mostActiveMember { userName, taskCount } to { name, taskCount }
+    const mostActiveMember = data[9]
+        ? { name: data[9].userName, taskCount: Number(data[9].taskCount) || 0 }
+        : null;
+
+    // Map teamWorkload { userName, openTasks } to { name, openTask }
+    const teamWorkload = (data[10] || []).map((w: any) => ({
+        name: w.userName,
+        openTask: Number(w.openTasks) || 0
+    }));
+
+    const tasksCompletedThisWeek = Number(data[11]) || 0;
+    const unpaidAmount = Number(data[12]) || 0;
 
     res.json({
         success: true,
         data: {
-            totalRevenue: data[0],
-            activeProjectsCount: data[1],
-            totalHours: data[2],
-            pendingInvoicesCount: data[3],
-            projectsProgress: data[4],
-            recentActivity: data[5],
-            upcomingTasks: data[6],
-            atRiskProjects: data[7],
-            upcomingDeadlines: data[8],
-            mostActiveMember: data[9],
-            teamWorkload: data[10],
-            tasksCompletedThisWeek: data[11]
+            totalRevenue,
+            activeProject,
+            totalHours,
+            pendingInvoices,
+            projectProgress,
+            recentActivity,
+            upcomingTasks,
+            atRiskProjects,
+            deadlines,
+            mostActiveMember,
+            teamWorkload,
+            tasksCompletedThisWeek,
+            unpaidAmount,
         }
+    })
+})
+
+
+export const getMonthlyHealthMetric = asyncHandler(async (req: any, res: any) => {
+    const service = new DashboardService(req.user.id)
+    const metrics = await service.getMonthlyHealth()
+
+    res.json({
+        success: true,
+        metrics,
     })
 })

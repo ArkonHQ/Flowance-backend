@@ -1,7 +1,6 @@
 import { db } from '../../config/db';
 import { tasks, projects, invoices, users } from '../../db/schema';
-import { eq, and, lt, ne, gte, sql } from 'drizzle-orm';
-import { clientMonthlyStatus } from '../../db/schema/views/client-monthly-status';
+import { eq, and, lt, ne, gte, sql, inArray } from 'drizzle-orm';
 import { desc } from 'drizzle-orm';
 import { timeEntries } from '../../db/schema/tables/time-entries';
 
@@ -12,7 +11,7 @@ export class DashboardService {
     // 1. Total Revenue (sum of paid invoices)
     async getTotalRevenue(): Promise<number> {
         const result = await db
-            .select({ total: sql<number>`COLESCE (sum(${invoices.amount}), 0)` })
+            .select({ total: sql<number>`COALESCE (sum(${invoices.amount}), 0)` })
             .from(invoices)
             .where(and(eq(invoices.ownerId, this.ownerId), eq(invoices.status, 'paid')))
             
@@ -45,7 +44,7 @@ export class DashboardService {
         const result = await db
             .select({ count: sql<number>`COUNT(*)` })
             .from(invoices)
-            .where(and(eq(invoices.ownerId, this.ownerId), sql`${invoices.status} IN ('pending', 'overdue')`))
+            .where(and(eq(invoices.ownerId, this.ownerId), inArray(invoices.status, ['sent', 'overdue'])))
         return result[0]?.count ?? 0
     }
 
@@ -60,13 +59,13 @@ export class DashboardService {
             })
             .from(projects)
             .leftJoin(tasks, eq(tasks.projectId, projects.id))
-            .where(eq(projects.id, projects.title))
+            .where(eq(projects.ownerId, this.ownerId))
             .groupBy(projects.id, projects.title)
             
         return projectsWithTasks.map(p => ({
             id: p.projectId,
             name: p.projectName,
-            progress: p.completedTasks === 0 ? 0 : Math.round((p.completedTasks / p.totalTasks) * 100),     
+            progress: p.totalTasks === 0 ? 0 : Math.round((p.completedTasks / p.totalTasks) * 100),     
         }))
     }
 
@@ -74,8 +73,8 @@ export class DashboardService {
     async getRecentActivity(limit = 10): Promise<any[]> {
         const invoiceActivity =  db
             .select({
-                type: sql<string>`'invoice'`,
-                description: sql<string>`CONCAT('Invoice #', ${invoices.id}, ' status changed to ', ${invoices.status})`,
+                type: sql<string>`'invoice'`.as('type'),
+                description: sql<string>`CONCAT('Invoice #', ${invoices.id}, ' status changed to ', ${invoices.status})`.as('description'),
                 createdAt: invoices.updatedAt,
             })
             .from(invoices)
@@ -83,8 +82,8 @@ export class DashboardService {
 
             const taskActivity = db
                 .select({
-                    type: sql<string>`'task'`,
-                    description: sql<string>`CONCAT('Task #', ${tasks.id}, ' status changed to ', ${tasks.status})`,
+                    type: sql<string>`'task'`.as('type'),
+                    description: sql<string>`CONCAT('Task #', ${tasks.id}, ' status changed to ', ${tasks.status})`.as('description'),
                     createdAt: tasks.updatedAt,
                 })
                 .from(tasks)
@@ -93,30 +92,36 @@ export class DashboardService {
 
                 const projectActivity = db
                     .select({
-                        type: sql<string>`'project'`,
-                        description: sql<string>`CONCAT('Project #', ${projects.id}), ' status changed to ', ${projects.status}`,
+                        type: sql<string>`'project'`.as('type'),
+                        description: sql<string>`CONCAT('Project #', ${projects.id}, ' status changed to ', ${projects.status})`.as('description'),
                         createdAt: projects.updatedAt,
                     })
                     .from(projects)
                     .where(eq(projects.ownerId, this.ownerId))
 
+                    const activityUnion = invoiceActivity
+                        .unionAll(taskActivity)
+                        .unionAll(projectActivity)
+                        .as('activity')
+
                     const union = await db
                         .select()
-                        .from(invoiceActivity.unionAll(taskActivity).unionAll(projectActivity))
-                        .orderBy(sql`createdAt DESC`)
+                        .from(activityUnion)
+                        .orderBy(desc(activityUnion.createdAt))
                         .limit(limit)
-                        
+
                     return union
     }
 
     // 7. Upcoming Tasks (deadline within next 7 days, NOT DONE)
-    async getUpcomingTasks(): Promise<any[]> {
+    async getUpcomingTasks(): Promise<Array<{ id: number; title: string; deadline: Date | null; projectName: string; priority: string }>> {
         const taskList = await db
             .select({
                 id: tasks.id,
                 title: tasks.title,
                 deadline: tasks.deadline,
                 projectName: projects.title,
+                priority: tasks.priority,
             })
             .from(tasks)
             .innerJoin(projects, eq(projects.id, tasks.projectId))
@@ -127,7 +132,10 @@ export class DashboardService {
             ))
             .orderBy(tasks.deadline)
 
-        return taskList;
+        return taskList.map((task) => ({
+            ...task,
+            priority: String(task.priority).charAt(0).toUpperCase() + String(task.priority).slice(1).toLowerCase(),
+        }));
     }
 
 
@@ -204,8 +212,8 @@ export class DashboardService {
                 eq(tasks.status, 'done'),
                 sql`${tasks.completedAt} >= NOW() - INTERVAL '30 days'`
             ))
-            .groupBy(users.id)
-            .orderBy(sql`task_count DESC`)
+            .groupBy(users.id, users.name)
+            .orderBy(desc(sql`COUNT(${tasks.id})`))
             .limit(1);
 
             return result[0] ?? null
@@ -217,12 +225,15 @@ export class DashboardService {
             const workload = await db
                 .select({
                     userName: users.name,
-                    openTasks: sql<number>`COUNT(${tasks.id})`,
+                    openTasks: sql<number>`COALESCE(COUNT(${tasks.id}), 0)`,
                 })
                 .from(users)
-                .leftJoin(tasks, and(eq(users.id, tasks.assignedTo), sql`${tasks.status} != 'done'`))
-                .where(eq(projects.ownerId, this.ownerId))
-                .groupBy(users.id)
+                .leftJoin(tasks, and(
+                    eq(users.id, tasks.assignedTo), 
+                    sql`${tasks.status} != 'done'`,
+                    eq(tasks.ownerId, this.ownerId)
+                ))
+                .groupBy(users.id, users.name)
 
                 return workload
         }
@@ -244,4 +255,80 @@ export class DashboardService {
         }
 
 
+        // 13. Unpaid Amount (sum of sent/overdue invoice amounts)
+        async getUnpaidAmount(): Promise<number> {
+            const result = await db
+                .select({ total: sql<number>`COALESCE(SUM(${invoices.amount}), 0)` })
+                .from(invoices)
+                .where(and(eq(invoices.ownerId, this.ownerId), inArray(invoices.status, ['sent', 'overdue'])))
+            return result[0]?.total ?? 0
+        }
+
+        // 14. Monthly health metrics for the authenticated owner
+        async getMonthlyHealth(): Promise<Array<{month: string; active_count: number; active_ids: number[]; new_clients: number; churn_rate: number | null; active_count_change: number}>> {
+            const result = await db.execute<{
+                month: Date;
+                active_count: number;
+                active_ids: number[];
+                new_clients: number;
+                churn_rate: number | null;
+                active_count_change: number;
+            }>(sql`
+                WITH monthly_activity AS (
+                    SELECT client_id, DATE_TRUNC('month', created_at) AS month
+                    FROM invoices
+                    WHERE owner_id = ${this.ownerId}
+                    UNION
+                    SELECT client_id, DATE_TRUNC('month', created_at) AS month
+                    FROM projects
+                    WHERE owner_id = ${this.ownerId}
+                ),
+                active_monthly AS (
+                    SELECT month, COUNT(DISTINCT client_id) AS active_count,
+                        ARRAY_AGG(DISTINCT client_id) AS active_ids
+                    FROM monthly_activity
+                    GROUP BY month
+                ),
+                first_activity AS (
+                    SELECT client_id, MIN(month) AS first_month
+                    FROM monthly_activity
+                    GROUP BY client_id
+                ),
+                new_clients AS (
+                    SELECT first_month AS month, COUNT(*) AS new_count
+                    FROM first_activity
+                    GROUP BY first_month
+                )
+                SELECT
+                    curr.month,
+                    curr.active_count,
+                    curr.active_ids,
+                    COALESCE(news.new_count, 0) AS new_clients,
+                    ROUND(
+                        100.0 * (
+                            SELECT COUNT(*)
+                            FROM UNNEST(prev.active_ids) AS id
+                            WHERE id NOT IN (SELECT UNNEST(curr.active_ids))
+                        ) / NULLIF(prev.active_count, 0),
+                        1
+                    ) AS churn_rate,
+                    (curr.active_count - COALESCE(prev.active_count, 0)) AS active_count_change
+                FROM active_monthly curr
+                LEFT JOIN active_monthly prev ON curr.month = prev.month + INTERVAL '1 month'
+                LEFT JOIN new_clients news ON news.month = curr.month
+                ORDER BY curr.month DESC;
+            `);
+            const rows = result.rows;
+
+            return rows.map((row) => ({
+                month: row.month.toISOString(),
+                active_count: Number(row.active_count),
+                active_ids: (row.active_ids ?? []).map((id: any) => Number(id)),
+                new_clients: Number(row.new_clients),
+                churn_rate: row.churn_rate === null ? null : Number(row.churn_rate),
+                active_count_change: Number(row.active_count_change),
+            }));
+        }
+
     }
+

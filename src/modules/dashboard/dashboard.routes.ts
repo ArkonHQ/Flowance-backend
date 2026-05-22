@@ -1,10 +1,10 @@
-import { NextFunction, Request, Router } from "express";
+import { Router } from "express";
 import { requireAuth } from "../../middleware/auth.middleware";
-import { validate } from "../../middleware/validate.middleware";
-import { getDashboard } from "./dashboard.controller";
+import { getDashboard, getMonthlyHealthMetric } from "./dashboard.controller";
 
 const router = Router();
 
 router.get('/', requireAuth, getDashboard)
+router.get('/monthly-health', requireAuth, getMonthlyHealthMetric)
 
 export default router;
