@@ -30,6 +30,7 @@ export const createTask = async (ownerId: string, data: CreateTaskInput) => {
         .values({
             title: data.title,
             status: data.status || 'todo',
+            description: data.description || null,
             priority: data.priority || 'medium',
             deadline: data.deadline ? new Date(data.deadline) : null,
             projectId: data.projectId,

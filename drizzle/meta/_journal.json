@@ -71,6 +71,13 @@
       "when": 1779310110265,
       "tag": "0009_even_johnny_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1779745872842,
+      "tag": "0010_glossy_gabe_jones",
+      "breakpoints": true
     }
   ]
 }

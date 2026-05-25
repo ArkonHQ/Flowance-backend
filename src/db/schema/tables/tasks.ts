@@ -10,6 +10,7 @@ export const tasks = pgTable('tasks', {
   status: taskStatusEnum('status').default('todo').notNull(),
   priority: priorityEnum('priority').default('medium').notNull(),
   deadline: timestamp('deadline'),
+  description: text('description'),
   completedAt: timestamp('completed_at'),
   assignedTo: integer('assigned_to')
     .references(() => users.id, { onDelete: 'set null' }),
