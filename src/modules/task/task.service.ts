@@ -25,16 +25,18 @@ export const getTaskById = async (id: number, ownerId: string) => {
 };
 
 export const createTask = async (ownerId: string, data: CreateTaskInput) => {
+    const status = data.status || 'todo';
     const [newTask] = await db
         .insert(tasks)
         .values({
             title: data.title,
-            status: data.status || 'todo',
+            status: status,
             description: data.description || null,
             priority: data.priority || 'medium',
             deadline: data.deadline ? new Date(data.deadline) : null,
             projectId: data.projectId,
-            ownerId
+            ownerId,
+            completedAt: status === 'done' ? new Date() : null
         })
         .returning();
     return newTask;
@@ -44,6 +46,14 @@ export const updateTask = async (id: number, data: UpdateTaskInput) => {
     const updateData: any = { ...data };
     if (data.deadline) updateData.deadline = new Date(data.deadline);
     updateData.updatedAt = new Date();
+
+    if (data.status !== undefined) {
+        if (data.status === 'done') {
+            updateData.completedAt = new Date();
+        } else {
+            updateData.completedAt = null;
+        }
+    }
 
     const [updated] = await db
         .update(tasks)
