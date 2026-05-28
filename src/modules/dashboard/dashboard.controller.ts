@@ -86,3 +86,14 @@ export const getMonthlyHealthMetric = asyncHandler(async (req: any, res: any) =>
         metrics,
     })
 })
+
+
+export const getTrends = asyncHandler(async (req: any, res: any) => {
+    const service = new DashboardService(req.user.id)
+    const lastMonth = await service.getLastMonthKPIs()
+
+    res.json({
+        success: true,
+        lastMonth,
+    })
+})
