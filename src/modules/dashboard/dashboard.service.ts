@@ -330,88 +330,123 @@ export class DashboardService {
             }));
         }
 
-        // 15. Last month KPI snapshot for trend calculations
-        async getLastMonthKPIs(): Promise<{
-            totalRevenue: number;
-            activeProjects: number;
-            totalHours: number;
-            pendingInvoices: number;
-            tasksCompleted: number;
-            unpaidAmount: number;
-        }> {
-            // Last month's paid invoice revenue (paid_at in last month)
-            const revenueResult = await db
+    async getLastMonthKPIs() {
+        const [
+        totalRevenue,
+        activeProjects,
+        totalHours,
+        pendingInvoices,
+        tasksCompleted,
+        unpaidAmount,
+        ] = await Promise.all([
+        this.getLastMonthRevenue(),
+        this.getLastMonthActiveProjects(),
+        this.getLastMonthTotalHours(),
+        this.getLastMonthPendingInvoices(),
+        this.getLastMonthTasksCompleted(),
+        this.getLastMonthUnpaidAmount(),
+        ]);
+
+        return {
+        totalRevenue,
+        activeProjects,
+        totalHours,
+        pendingInvoices,
+        tasksCompleted,
+        unpaidAmount,
+        };
+    }
+
+        // Sum of paid invoices where paid_at falls in last calendar month
+        private getLastMonthRevenue = async (): Promise<number> => {
+            const [result] = await db
                 .select({ total: sql<number>`COALESCE(SUM(${invoices.amount}), 0)` })
                 .from(invoices)
-                .where(and(
-                    eq(invoices.ownerId, this.ownerId),
-                    eq(invoices.status, 'paid'),
-                    sql`${invoices.paidAt} >= date_trunc('month', NOW()) - INTERVAL '1 month'`,
-                    sql`${invoices.paidAt} < date_trunc('month', NOW())`
-                ));
+                .where(
+                    and(
+                        eq(invoices.ownerId, this.ownerId),
+                        eq(invoices.status, 'paid'),
+                        sql`${invoices.paidAt} >= date_trunc('month', NOW()) - INTERVAL '1 month'`,
+                        sql`${invoices.paidAt} < date_trunc('month', NOW())`
+                    )
+                )
+                return Number(result?.total) || 0 
+        }
 
-            // Last month's active projects (created before end of last month, status was active)
-            const projectsResult = await db
+        // Count of projects that are currently active (status = 'acitve')
+        private getLastMonthActiveProjects = async (): Promise<number> => {
+            const [result] = await db
                 .select({ count: sql<number>`COUNT(*)` })
                 .from(projects)
-                .where(and(
-                    eq(projects.ownerId, this.ownerId),
-                    eq(projects.status, 'active'),
-                    sql`${projects.createdAt} < date_trunc('month', NOW())`
-                ));
-
-            // Last month's total hours (time entries in last month)
-            const hoursResult = await db
-                .select({ totalHours: sql<number>`COALESCE(SUM(${timeEntries.hours}), 0)` })
+                .where(
+                    and(
+                        eq(projects.ownerId, this.ownerId),
+                        eq(projects.status, 'active')
+                    )
+                )
+                return Number(result?.count) || 0
+        }
+        
+        // Sum of hours logged in time_entries during last calendar month
+        private getLastMonthTotalHours = async (): Promise<number> => {
+            const [result] = await db
+                .select({ total: sql<number>`COALESCE(SUM(${timeEntries.hours}), 0)` })
                 .from(timeEntries)
                 .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
                 .innerJoin(projects, eq(projects.id, tasks.projectId))
-                .where(and(
-                    eq(projects.ownerId, this.ownerId),
-                    sql`${timeEntries.date} >= date_trunc('month', NOW()) - INTERVAL '1 month'`,
-                    sql`${timeEntries.date} < date_trunc('month', NOW())`
-                ));
+                .where(
+                    and(
+                        eq(projects.ownerId, this.ownerId),
+                        sql`${timeEntries.date} >= date_trunc('month', NOW()) - INTERVAL '1 month'`,
+                        sql`${timeEntries.date} < date_trunc('month', NOW())`
+                    )
+                )
+                return Number(result?.total) || 0
+        }
 
-            // Last month's pending invoices
-            const pendingResult = await db
+        // Count of invoices currently with status 'sent' or 'overdue'
+        private getLastMonthPendingInvoices = async (): Promise<number> => {
+            const [result] = await db
                 .select({ count: sql<number>`COUNT(*)` })
                 .from(invoices)
-                .where(and(
-                    eq(invoices.ownerId, this.ownerId),
-                    inArray(invoices.status, ['sent', 'overdue']),
-                    sql`${invoices.createdAt} < date_trunc('month', NOW())`
-                ));
+                .where(
+                    and(
+                        eq(invoices.ownerId, this.ownerId),
+                        inArray(invoices.status, ['sent', 'overdue'])
+                    )
+                )
+                return Number(result?.count) || 0
+        } 
 
-            // Last month's completed tasks
-            const tasksResult = await db
+        // Sum of amounts for invoices currently with status 'sent' or 'overdue'
+        private getLastMonthUnpaidAmount = async (): Promise<number> => {
+            const [result] = await db 
+                .select({ total: sql<number>`COALESCE(SUM(${invoices.amount}), 0)` })
+                .from(invoices)
+                .where(
+                    and(
+                        eq(invoices.ownerId, this.ownerId),
+                        inArray(invoices.status, ['sent', 'overdue'])
+                    )
+                )
+                return Number(result?.total) || 0
+        }
+
+        // Count of tasks completed (status = 'done') during last calendar month
+        private getLastMonthTasksCompleted = async (): Promise<number> => {
+            const [result] = await db
                 .select({ count: sql<number>`COUNT(*)` })
                 .from(tasks)
                 .innerJoin(projects, eq(projects.id, tasks.projectId))
-                .where(and(
-                    eq(projects.ownerId, this.ownerId),
-                    eq(tasks.status, 'done'),
-                    sql`${tasks.completedAt} >= date_trunc('month', NOW()) - INTERVAL '1 month'`,
-                    sql`${tasks.completedAt} < date_trunc('month', NOW())`
-                ));
-
-            // Last month's unpaid amount
-            const unpaidResult = await db
-                .select({ total: sql<number>`COALESCE(SUM(${invoices.amount}), 0)` })
-                .from(invoices)
-                .where(and(
-                    eq(invoices.ownerId, this.ownerId),
-                    inArray(invoices.status, ['sent', 'overdue']),
-                    sql`${invoices.createdAt} < date_trunc('month', NOW())`
-                ));
-
-            return {
-                totalRevenue: Number(revenueResult[0]?.total) || 0,
-                activeProjects: Number(projectsResult[0]?.count) || 0,
-                totalHours: Number(hoursResult[0]?.totalHours) || 0,
-                pendingInvoices: Number(pendingResult[0]?.count) || 0,
-                tasksCompleted: Number(tasksResult[0]?.count) || 0,
-                unpaidAmount: Number(unpaidResult[0]?.total) || 0,
-            };
+                .where(
+                    and(
+                        eq(projects.ownerId, this.ownerId),
+                        eq(tasks.status, 'done'),
+                        sql`${tasks.completedAt} >= date_trunc('month', NOW()) - INTERVAL '1 month'`,
+                        sql`${tasks.completedAt} < date_trunc('month', NOW())` 
+                    )
+                )
+            return Number(result?.count) || 0
         }
 
     }
