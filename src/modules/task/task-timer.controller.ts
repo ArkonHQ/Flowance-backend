@@ -52,7 +52,8 @@ export const stopTimer = asyncHandler(async (req: any, res: any) => {
         userId,
         hours: hours.toFixed(2),
         description: description || `Worked on task ${taskIdNumber}`,
-        date: new Date()
+        date: new Date(),
+        ownerId: userId
       })
       .returning()
 

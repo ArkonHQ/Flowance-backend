@@ -5,7 +5,7 @@ export const projectStatusEnum = pgEnum('project_status', [
 ])
 
 export const taskStatusEnum = pgEnum('task_status', [
-  'todo', 'in_progress', 'done', 'delayed', 'cancelled'
+  'todo', 'in_progress', 'done', 'delayed', 'cancelled', 'overdue'
 ])
 
 export const priorityEnum = pgEnum('priority', [

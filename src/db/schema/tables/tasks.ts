@@ -1,8 +1,9 @@
-import { integer, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
+import { integer, pgTable, serial, text, timestamp, index } from 'drizzle-orm/pg-core';
 import { priorityEnum, taskStatusEnum } from '../enums';
 import { projects } from './projects';
 import { betterAuthUser } from './auth';
 import { users } from './users';
+import { sql } from 'drizzle-orm';
 
 export const tasks = pgTable('tasks', {
   id: serial('id').primaryKey(),
@@ -23,4 +24,8 @@ export const tasks = pgTable('tasks', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
-});
+}, (table) => ({
+  projectStatusCompletedIdx: index('idx_tasks_project_status_completed')
+    .on(table.projectId, table.status, table.completedAt)
+    .where(sql`status = 'done'`), 
+}));

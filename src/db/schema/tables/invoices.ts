@@ -23,9 +23,16 @@ export const invoices = pgTable('invoices', {
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
     deletedAt: timestamp("deleted_at"),
 }, (table) => ({
-    clientIdx: index('idx_invoice_client_id')
-        .on(table.clientId),
     clientStatusIdx: index('idx_invoice_client_id_status')
         .on(table.clientId, table.status),
-    paidDatesIdx: index('idx_invoices_paid_at_partial').on(table.clientId, table.paidAt, table.dueDate).where(sql`status = 'paid'`)
+    paidDatesIdx: index('idx_invoices_paid_at_partial')
+        .on(table.clientId, table.paidAt, table.dueDate)
+        .where(sql`status = 'paid'`),
+    ownerStatusPaidIdx: index('idx_invoices_owner_status_paid_at_partial')
+        .on(table.ownerId, table.status, table.paidAt),
+    ownerStatusIdx: index('idx_invoices_owner_status')
+        .on(table.ownerId, table.status),
+    ownerStatusDueDatePartialIdx: index('idx_invoices_owner_status_due_date_partial')
+        .on(table.ownerId, table.status, table.dueDate)
+        .where(sql`status = 'overdue'`),
 }));
