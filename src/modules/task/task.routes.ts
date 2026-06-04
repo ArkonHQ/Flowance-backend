@@ -12,6 +12,8 @@ router.use(requireAuth);
 router.post("/timer/start", startTimer);
 router.post("/timer/stop", stopTimer);
 
+router.get('/total-hours', taskController.getTotalHours)
+
 router.get("/", taskController.getAllTasks);
 router.get("/:id", taskController.getOneTask);
 router.post("/", validate(createTaskSchema), taskController.createTask);

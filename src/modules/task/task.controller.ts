@@ -2,11 +2,12 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import * as taskService from "./task.service";
 import { asyncHandler } from "../../utils/asyncHandler";
+import { TimeEntryService } from "../time-entries/time-entry.service";
 
 export const getAllTasks = asyncHandler(async (req: any, res: Response) => {
     const { projectId } = req.query;
     const allTasks = await taskService.getTasksByOwner(
-        req.user.id, 
+        req.user.id,
         projectId ? parseInt(projectId as string) : undefined
     );
 
@@ -78,3 +79,14 @@ export const deleteTask = asyncHandler(async (req: any, res: Response) => {
     });
 });
 
+export const getTotalHours = asyncHandler(async (req:any, res: any) => {
+
+  const ownerId = req.user.id
+  const service = new TimeEntryService(ownerId)
+  const totalHours = await service.getTotalHours()
+
+  res.json({
+    success: true,
+    totalHours
+  })
+})
