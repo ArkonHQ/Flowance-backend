@@ -1,0 +1,1 @@
+ALTER TABLE "time_entries" ALTER COLUMN "hours" SET DATA TYPE numeric(8, 4);

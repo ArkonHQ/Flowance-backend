@@ -14,7 +14,7 @@ export const startTimer = asyncHandler(async (req: any, res: any) => {
 // Stop timer and log hours
 export const stopTimer = asyncHandler(async (req: any, res: any) => {
   const { taskId } = req.params;
-  const { startTime, endTime, description } = req.body;
+  const { startTime, endTime, description, hours: frontendHours } = req.body;
   const ownerId = req.user.id; 
   const taskIdNumber = Number(taskId);
 
@@ -22,10 +22,13 @@ export const stopTimer = asyncHandler(async (req: any, res: any) => {
     return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: "Invalid task ID" });
   }
 
-  // Calculate hours
-  const start = new Date(startTime);
-  const end = new Date(endTime);
-  const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60); 
+  // Use frontend calculated hours if provided (which accounts for paused time)
+  let hours = frontendHours ? Number(frontendHours) : 0;
+  if (!hours && startTime && endTime) {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60); 
+  }
 
   if (hours <= 0) {
     return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: "End time must be after start time" });
@@ -48,7 +51,7 @@ export const stopTimer = asyncHandler(async (req: any, res: any) => {
     .insert(timeEntries)
     .values({
       taskId: taskIdNumber,
-      hours: hours.toFixed(2),
+      hours: hours.toFixed(4),
       description: description || `Worked on task ${taskIdNumber}`,
       date: new Date(),
       ownerId,
@@ -103,7 +106,7 @@ export const manualTime = asyncHandler(async (req: any, res: any) => {
     .insert(timeEntries)
     .values({
       taskId: taskIdNum,
-      hours: hoursNum.toFixed(2),
+      hours: hoursNum.toFixed(4),
       description: description || `Manual time entry for task ${taskIdNum}`,
       date: entryDate,
       ownerId,

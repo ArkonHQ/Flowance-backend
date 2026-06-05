@@ -92,6 +92,13 @@
       "when": 1780612923046,
       "tag": "0012_make_userId_nullable",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1780683938546,
+      "tag": "0013_increase_time_entries_hours_precision",
+      "breakpoints": true
     }
   ]
 }
