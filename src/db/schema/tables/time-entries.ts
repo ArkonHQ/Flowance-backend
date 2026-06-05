@@ -9,7 +9,6 @@ export const timeEntries = pgTable('time_entries', {
     .notNull()
     .references(() => tasks.id, { onDelete: 'cascade' }),
   userId: integer('user_id')
-    .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   hours: numeric('hours', { precision: 5, scale: 2 }).notNull(),
   date: timestamp('date').defaultNow().notNull(),

@@ -19,9 +19,9 @@ export const auth = betterAuth({
   cookie: {
     // Enable cross-port cookie sharing on localhost
     domain: "localhost",
+    sameSite: 'none',
+    secure: false,
   },
 });
 
-export type Auth = typeof auth;
-
-    
+export type Auth = typeof auth

@@ -5,7 +5,8 @@ import { DashboardService } from "./dashboard.service";
 
 
 export const getDashboard = asyncHandler(async (req: any, res: any) => {
-    const service = new DashboardService(req.user.id)
+    const period = String(req.query?.period ?? 'all')
+    const service = new DashboardService(req.user.id, period)
     const data = await Promise.all([
         service.getTotalRevenue(),
         service.getActiveProjectsCount(),

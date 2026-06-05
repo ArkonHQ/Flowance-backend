@@ -6,14 +6,40 @@ import { timeEntries } from '../../db/schema/tables/time-entries';
 
 
 export class DashboardService {
-    constructor(private ownerId: string) {}
+    constructor(private ownerId: string, private period: string = 'all') {}
+
+    private periodStart(): Date | null {
+        const now = new Date()
+        switch (this.period) {
+            case '7days':
+                return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+            case '30days':
+                return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+            case '90days':
+                return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+            case 'thisyear':
+                return new Date(now.getFullYear(), 0, 1)
+            default:
+                return null
+        }
+    }
+
+    private periodFilter(column: any) {
+        const start = this.periodStart()
+        return start ? sql`${column} >= ${start}` : undefined
+    }
 
     // 1. Total Revenue (sum of paid invoices)
     async getTotalRevenue(): Promise<number> {
+        const dateFilter = this.periodFilter(invoices.createdAt)
         const result = await db
             .select({ total: sql<number>`COALESCE (sum(${invoices.amount}), 0)` })
             .from(invoices)
-            .where(and(eq(invoices.ownerId, this.ownerId), eq(invoices.status, 'paid')))
+            .where(and(
+                eq(invoices.ownerId, this.ownerId),
+                eq(invoices.status, 'paid'),
+                ...(dateFilter ? [dateFilter] : [])
+            ))
             
             return result[0]?.total ?? 0
     } 
@@ -30,21 +56,30 @@ export class DashboardService {
 
     // 3. Total Hours 
     async getTotalHours(): Promise<number> {
+        const dateFilter = this.periodFilter(timeEntries.date)
         const result = await db
             .select({ totalHours: sql<number>`COALESCE (SUM(${timeEntries.hours}), 0)` })
             .from(timeEntries)
             .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
             .innerJoin(projects, eq(projects.id, tasks.projectId))
-            .where(eq(projects.ownerId, this.ownerId))
+            .where(and(
+                eq(projects.ownerId, this.ownerId),
+                ...(dateFilter ? [dateFilter] : [])
+            ))
         return result[0]?.totalHours ?? 0
     }
 
     // 4. Pending Invoices 
     async getPendingInvoicesCount(): Promise<number> {
+        const dateFilter = this.periodFilter(invoices.createdAt)
         const result = await db
             .select({ count: sql<number>`COUNT(*)` })
             .from(invoices)
-            .where(and(eq(invoices.ownerId, this.ownerId), inArray(invoices.status, ['sent', 'overdue'])))
+            .where(and(
+                eq(invoices.ownerId, this.ownerId),
+                inArray(invoices.status, ['sent', 'overdue']),
+                ...(dateFilter ? [dateFilter] : [])
+            ))
         return result[0]?.count ?? 0
     }
 
@@ -71,6 +106,7 @@ export class DashboardService {
 
     // 6. Recent Activity (last 10 event from invoices, projects, tasks)
     async getRecentActivity(limit = 10): Promise<any[]> {
+        const activityFilter = this.periodFilter(invoices.updatedAt)
         const invoiceActivity =  db
             .select({
                 type: sql<string>`'invoice'`.as('type'),
@@ -78,8 +114,9 @@ export class DashboardService {
                 createdAt: invoices.updatedAt,
             })
             .from(invoices)
-            .where(eq(invoices.ownerId, this.ownerId))
+            .where(and(eq(invoices.ownerId, this.ownerId), ...(activityFilter ? [activityFilter] : [])))
 
+            const taskFilter = this.periodFilter(tasks.updatedAt)
             const taskActivity = db
                 .select({
                     type: sql<string>`'task'`.as('type'),
@@ -88,8 +125,9 @@ export class DashboardService {
                 })
                 .from(tasks)
                 .innerJoin(projects, eq(projects.id, tasks.projectId))
-                .where(eq(projects.ownerId, this.ownerId))
+                .where(and(eq(projects.ownerId, this.ownerId), ...(taskFilter ? [taskFilter] : [])))
 
+                const projectFilter = this.periodFilter(projects.updatedAt)
                 const projectActivity = db
                     .select({
                         type: sql<string>`'project'`.as('type'),
@@ -97,7 +135,7 @@ export class DashboardService {
                         createdAt: projects.updatedAt,
                     })
                     .from(projects)
-                    .where(eq(projects.ownerId, this.ownerId))
+                    .where(and(eq(projects.ownerId, this.ownerId), ...(projectFilter ? [projectFilter] : [])))
 
                     const activityUnion = invoiceActivity
                         .unionAll(taskActivity)
@@ -241,6 +279,11 @@ export class DashboardService {
 
         // 12. Tasks completed this week
         async getTasksCompletedThisWeek(): Promise<number> {
+            const periodStart = this.periodStart()
+            const completedAtFilter = periodStart
+                ? sql`${tasks.completedAt} >= ${periodStart}`
+                : sql`${tasks.completedAt} >= date_trunc('week', NOW())`
+
             const reslut = await db
                 .select({ count: sql<number>`COUNT(*)` })
                 .from(tasks)
@@ -248,7 +291,7 @@ export class DashboardService {
                 .where(and(
                     eq(projects.ownerId, this.ownerId),
                     eq(tasks.status, 'done'),
-                    sql`${tasks.completedAt} >= date_trunc('week', NOW())`
+                    completedAtFilter
                 )) 
 
                 return reslut[0]?.count ?? 0
@@ -257,10 +300,15 @@ export class DashboardService {
 
         // 13. Unpaid Amount (sum of sent/overdue invoice amounts)
         async getUnpaidAmount(): Promise<number> {
-            const result = await db
-                .select({ total: sql<number>`COALESCE(SUM(${invoices.amount}), 0)` })
-                .from(invoices)
-                .where(and(eq(invoices.ownerId, this.ownerId), inArray(invoices.status, ['sent', 'overdue'])))
+        const dateFilter = this.periodFilter(invoices.createdAt)
+        const result = await db
+            .select({ total: sql<number>`COALESCE(SUM(${invoices.amount}), 0)` })
+            .from(invoices)
+            .where(and(
+                eq(invoices.ownerId, this.ownerId),
+                inArray(invoices.status, ['sent', 'overdue']),
+                ...(dateFilter ? [dateFilter] : [])
+            ))
             return result[0]?.total ?? 0
         }
 
