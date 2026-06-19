@@ -127,6 +127,13 @@
       "when": 1781828155255,
       "tag": "0017_soft_steel_serpent",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1781836356351,
+      "tag": "0018_damp_shadow_king",
+      "breakpoints": true
     }
   ]
 }

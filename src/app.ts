@@ -10,7 +10,6 @@ import projectRoute from "./modules/project/project.routes";
 import taskRouter from "./modules/task/task.routes";
 import { auth } from './lib/auth';
 import timerRouter from './modules/timer/timer.routes';
-import missionRouter from './modules/task/mission/mission.routes'
 const app = express();
 
 app.use(cors({
@@ -34,7 +33,7 @@ app.use('/api/tasks', taskRouter);
 
 app.use('/api/timer', timerRouter)
 
-app.use('/api/mission', missionRouter)
+
 
 app.get('/health', (_req: any, res: any) => {
     res.status(200).json({ status: 'OK' });

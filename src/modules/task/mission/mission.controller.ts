@@ -3,7 +3,7 @@ import { projects, tasks, users } from "../../../db/schema";
 import { asyncHandler } from "../../../utils/asyncHandler";
 import { db } from "../../../config/db";
 import { StatusCodes } from "http-status-codes";
-import { success } from "zod";
+
 import { taskMissions } from "../../../db/schema/tables/missions";
 
 
@@ -21,7 +21,7 @@ export const getMissions = asyncHandler(async (req: any, res: any) => {
     )
     .where(
       and(
-        eq(tasks.projectId, taskId),
+        eq(tasks.id, taskId),
         eq(projects.ownerId, userId)
       )
     )
@@ -42,7 +42,8 @@ export const getMissions = asyncHandler(async (req: any, res: any) => {
 export const addMission = asyncHandler(async (req: any, res: any) => {
   const taskId = Number(req.params.taskId)
   const userId = req.user.id
-  const {name, assigneeId } = req.body
+  const { text, assigneeId } = req.body
+  const name = text
 
   const [task] = await db
     .select()
@@ -92,7 +93,7 @@ export const addMission = asyncHandler(async (req: any, res: any) => {
 
 
     
-   res.json({ mission: fullMission })
+   res.json({ mission: fullMission.taskMissions })
 })
 
 export const toggleMission = asyncHandler(async ( req: any, res: any ) => {
@@ -104,18 +105,19 @@ export const toggleMission = asyncHandler(async ( req: any, res: any ) => {
   const [mission] = await db
     .select()
     .from(taskMissions)
-    .innerJoin(tasks, eq(tasks.id, taskId))
+    .innerJoin(tasks, eq(tasks.id, taskMissions.taskId))
     .innerJoin(projects, eq(projects.id, tasks.projectId))
     .where(
       and(
         eq(taskMissions.id, missionId),
+        eq(taskMissions.taskId, taskId),
         eq(projects.ownerId, userId)
       )
     )
 
   if (!mission) return res.status(StatusCodes.NOT_FOUND).json({ error: 'Mission not found' })
 
-  const newCompleted = !taskMissions.completed
+  const newCompleted = !mission.taskMissions.completed
   const now = newCompleted ? new Date() : null
 
 
@@ -124,7 +126,6 @@ export const toggleMission = asyncHandler(async ( req: any, res: any ) => {
     .set({
       completed: newCompleted,
       completedAt: now,
-      completedById: newCompleted ? userId : null,
       updatedAt: new Date(),
     })
     .where(eq(taskMissions.id, missionId))
@@ -165,13 +166,13 @@ export const updateMission = asyncHandler(async (req: any, res: any ) => {
   const taskId = Number(req.params.taskId)
   const missionId = Number(req.params.missionId)
   const userId = req.user.id
-  const { name, assigneeId, posision } = req.body
+  const { name, assigneeId, position } = req.body
 
   const [mission] = await db
     .select()
     .from(taskMissions)
-    .innerJoin(projects, eq(projects.id, tasks.projectId))
     .innerJoin(tasks, eq(tasks.id, taskMissions.taskId))
+    .innerJoin(projects, eq(projects.id, tasks.projectId))
     .where(
       and(
         eq(taskMissions.id, missionId),
@@ -188,7 +189,7 @@ export const updateMission = asyncHandler(async (req: any, res: any ) => {
     .set({
       name: name ?? taskMissions.name,
       assigneeId: assigneeId !== undefined ? assigneeId : taskMissions.assigneeId,
-      position: posision ?? taskMissions.position,
+      position: position ?? mission.taskMissions.position,
       updatedAt: new Date()
     })
     .where(eq(taskMissions.id, missionId))

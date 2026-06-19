@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, text, json, timestamp, index } from 'drizzle-orm/pg-core';
+import { integer, pgTable, serial, text, json, timestamp, index, varchar } from 'drizzle-orm/pg-core';
 import { priorityEnum, taskStatusEnum } from '../enums';
 import { projects } from './projects';
 import { betterAuthUser } from './auth';
@@ -12,6 +12,7 @@ export const tasks = pgTable('tasks', {
   priority: priorityEnum('priority').default('medium').notNull(),
   deadline: timestamp('deadline'),
   description: text('description'),
+  summery: varchar('summery', {length: 255}),
   completedAt: timestamp('completed_at'),
   assignedTo: integer('assigned_to')
     .references(() => users.id, { onDelete: 'set null' }),
