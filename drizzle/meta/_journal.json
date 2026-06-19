@@ -134,6 +134,13 @@
       "when": 1781836356351,
       "tag": "0018_damp_shadow_king",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1781906947274,
+      "tag": "0019_oval_cannonball",
+      "breakpoints": true
     }
   ]
 }
