@@ -176,6 +176,7 @@ export const updateMission = asyncHandler(async (req: any, res: any ) => {
     .where(
       and(
         eq(taskMissions.id, missionId),
+        eq(taskMissions.taskId, taskId),
         eq(projects.ownerId, userId)
       )
     )
@@ -187,8 +188,8 @@ export const updateMission = asyncHandler(async (req: any, res: any ) => {
   const [updated] = await db
     .update(taskMissions)
     .set({
-      name: name ?? taskMissions.name,
-      assigneeId: assigneeId !== undefined ? assigneeId : taskMissions.assigneeId,
+      name: name ?? mission.taskMissions.name,
+      assigneeId: assigneeId ?? mission.taskMissions.assigneeId,
       position: position ?? mission.taskMissions.position,
       updatedAt: new Date()
     })

@@ -14,7 +14,7 @@ router.use(requireAuth)
 
 router.get('/', getMissions)
 router.post('/', addMission)
-router.put('/:missionId', updateMission)
+router.patch('/:missionId', updateMission)
 router.patch('/:missionId/toggle', toggleMission)
 router.delete('/:missionId', deleteMission)
 
