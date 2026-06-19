@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { integer, pgTable, serial, text, json, timestamp, index } from 'drizzle-orm/pg-core';
 import { priorityEnum, taskStatusEnum } from '../enums';
 import { projects } from './projects';
 import { betterAuthUser } from './auth';
