@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import * as taskService from "./task.service";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { TimeEntryService } from "../time-entries/time-entry.service";
+import { TaggingService } from "../tags/tagging.service";
 
 export const getAllTasks = asyncHandler(async (req: any, res: Response) => {
     const { projectId } = req.query;
@@ -46,6 +47,8 @@ export const createTask = asyncHandler(async (req: any, res: Response) => {
 
 export const updateTask = asyncHandler(async (req: any, res: Response) => {
     const task = await taskService.getTaskById(parseInt(req.params.id), req.user.id);
+    const ownerId = req.user.id
+    const taskId = req.params.id
 
     if (!task) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -54,10 +57,18 @@ export const updateTask = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    const updated = await taskService.updateTask(parseInt(req.params.id), req.body);
+    const { tagIds } = req.body
+
+    if (tagIds !== undefined) {
+        const taggingService = new TaggingService(ownerId)
+        await taggingService.replaceTags('task', taskId, ownerId)
+    }
+
+    const updatedTask = await taskService.getTaskWihTags(taskId, ownerId)
+
     res.status(StatusCodes.OK).json({
         success: true,
-        task: updated,
+        task: updatedTask,
         message: "Task successfully updated",
     });
 });

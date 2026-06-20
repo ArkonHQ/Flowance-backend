@@ -1,7 +1,8 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '../../config/db';
 import { projects } from '../../db/schema';
 import { CreateProjectInput, UpdateProjectInput } from './project.schema';
+import { TaggingService } from '../tags/tagging.service';
 
 export const getProjectsByOwner = async (ownerId: string) => {
     return db
@@ -46,6 +47,24 @@ export const updateProject = async (id: number, data: UpdateProjectInput) => {
         .returning();
     return updated;
 };
+
+export const getProjectsWithTags = async (projectId: number, ownerId: string) => {
+
+    const [project] = await db
+        .select()
+        .from(projects)
+        .where(
+            and(
+                eq(projects.id, projectId),
+                eq(projects.ownerId, ownerId)
+            )
+        )
+
+        const taggingService = new TaggingService(ownerId)
+        const tags = await taggingService.getTagsForEntity('project', projectId)
+
+        return { project, tags }
+}
 
 export const deleteProject = async (id: number) => {
     const [deleted] = await db

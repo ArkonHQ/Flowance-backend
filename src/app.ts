@@ -10,6 +10,7 @@ import projectRoute from "./modules/project/project.routes";
 import taskRouter from "./modules/task/task.routes";
 import { auth } from './lib/auth';
 import timerRouter from './modules/timer/timer.routes';
+import tagRouter from './modules/tags/tag.routes';
 const app = express();
 
 app.use(cors({
@@ -31,7 +32,9 @@ app.use('/api/projects', projectRoute);
 
 app.use('/api/tasks', taskRouter);
 
-app.use('/api/timer', timerRouter)
+app.use('/api/timer', timerRouter);
+
+app.use('/api/tags', tagRouter);
 
 
 

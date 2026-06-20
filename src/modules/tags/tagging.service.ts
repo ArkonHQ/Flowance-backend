@@ -17,10 +17,10 @@ import { taggings } from "../../db/schema/tables/taggings"
 
 
 export class TaggingService {
-  constructor(private ownerId: number) {}
+  constructor(private ownerId: string) {}
 
   //Get all tags for an entity
-  async getTagsForEntity(entityType: string, entityId: number ) {
+  async getTagsForEntity(entityType: string, entityId: number) {
     return await db
       .select({ tags: tags })
       .from(taggings)
@@ -119,6 +119,6 @@ export class TaggingService {
       )
       .groupBy(tags.id)
   }
-
   
 }
+

@@ -1,7 +1,5 @@
-import { integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core"
-import { sql } from "drizzle-orm";
-import { relations } from "drizzle-orm";
-import { users } from "./users";
+import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core"
+import { betterAuthUser } from "./auth";
 
 
 
@@ -10,7 +8,7 @@ export const tags = pgTable('tags', {
   name: text('name').notNull().unique(),
   icon: text('icon').default('tag'),
   color: text('color').default('#6b7280'),
-  ownerId: integer('ownerId').references(() => users.id, {onDelete: 'cascade'}),
+  ownerId: text('owner_id').references(() => betterAuthUser.id, {onDelete: 'cascade'}),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
