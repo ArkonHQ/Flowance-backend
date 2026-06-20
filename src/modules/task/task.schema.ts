@@ -19,6 +19,7 @@ export const createTaskSchema = z.object({
     projectId: z.number(),
     deletedAt: optionalDate,
     totalHours: z.number().optional(),
+    tagIds: z.array(z.number()).optional(),
 });
 
 export const updateTaskSchema = z.object({
@@ -31,6 +32,7 @@ export const updateTaskSchema = z.object({
     projectId: z.number().optional(),
     deletedAt: optionalDate,
     totalHours: z.number().optional(),
+    tagIds: z.array(z.number()).optional(),
 });
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;

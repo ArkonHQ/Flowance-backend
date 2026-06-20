@@ -8,5 +8,6 @@ router.use(requireAuth);
 
 router.get("/", tagController.getAllTags);
 router.post("/", tagController.createTag);
+router.patch("/:id", tagController.updateTag);
 
 export default router;

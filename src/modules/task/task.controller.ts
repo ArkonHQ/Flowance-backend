@@ -20,7 +20,7 @@ export const getAllTasks = asyncHandler(async (req: any, res: Response) => {
 });
 
 export const getOneTask = asyncHandler(async (req: any, res: Response) => {
-    const task = await taskService.getTaskById(parseInt(req.params.id), req.user.id);
+    const task = await taskService.getTaskWihTags(parseInt(req.params.id), req.user.id);
 
     if (!task) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -38,9 +38,18 @@ export const getOneTask = asyncHandler(async (req: any, res: Response) => {
 
 export const createTask = asyncHandler(async (req: any, res: Response) => {
     const newTask = await taskService.createTask(req.user.id, req.body);
+    
+    const { tagIds } = req.body;
+    if (tagIds !== undefined) {
+        const taggingService = new TaggingService(req.user.id);
+        await taggingService.replaceTags('task', newTask.id, tagIds);
+    }
+    
+    const finalTask = await taskService.getTaskWihTags(newTask.id, req.user.id);
+
     res.status(StatusCodes.CREATED).json({
         success: true,
-        task: newTask,
+        task: finalTask,
         message: "Task successfully created",
     });
 });
@@ -61,7 +70,13 @@ export const updateTask = asyncHandler(async (req: any, res: Response) => {
 
     if (tagIds !== undefined) {
         const taggingService = new TaggingService(ownerId)
-        await taggingService.replaceTags('task', taskId, ownerId)
+        await taggingService.replaceTags('task', parseInt(taskId), tagIds)
+    }
+
+    // Pass the rest of the body to updateTask
+    const { tagIds: _tagIds, ...updateData } = req.body;
+    if (Object.keys(updateData).length > 0) {
+        await taskService.updateTask(parseInt(taskId), updateData);
     }
 
     const updatedTask = await taskService.getTaskWihTags(taskId, ownerId)

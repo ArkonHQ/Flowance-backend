@@ -9,6 +9,7 @@ export const createProjectSchema = z.object({
     clientId: z.number(),
     ownerId: z.string().optional(),
     deletedAt: z.string().datetime().optional().nullable(),
+    tagIds: z.array(z.number()).optional(),
 });
 
 export const updateProjectSchema = z.object({
@@ -19,6 +20,7 @@ export const updateProjectSchema = z.object({
     budget: z.union([z.string(), z.number()]).optional().nullable(),
     clientId: z.number().optional(),
     deletedAt: z.string().datetime().optional().nullable(),
+    tagIds: z.array(z.number()).optional(),
 });
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;

@@ -11,10 +11,23 @@ export const getTasksByOwner = async (ownerId: string, projectId?: number) => {
         conditions.push(eq(tasks.projectId, projectId));
     }
 
-    return db
+    const tasksList = await db
         .select()
         .from(tasks)
         .where(and(...conditions));
+
+    if (tasksList.length === 0) return [];
+
+    const taggingService = new TaggingService(ownerId);
+    const tagsMap = await taggingService.getTagsForEntities(
+        'task',
+        tasksList.map(t => t.id)
+    );
+
+    return tasksList.map(t => ({
+        ...t,
+        tags: tagsMap[t.id] || []
+    }));
 };
 
 export const getTaskById = async (id: number, ownerId: string) => {
@@ -66,8 +79,11 @@ export const updateTask = async (id: number, data: UpdateTaskInput) => {
 };
 
 export const getTaskWihTags = async (taskId: number, ownerId: string) => {
-    await db
-        .select()
+    const result = await db
+        .select({
+            task: tasks,
+            project: projects
+        })
         .from(tasks)
         .innerJoin(projects, eq(projects.id, tasks.projectId))
         .where(
@@ -77,10 +93,12 @@ export const getTaskWihTags = async (taskId: number, ownerId: string) => {
             )
         )
 
-        const taggingService = new TaggingService(ownerId)
-        const tags = await taggingService.getTagsForEntity('task', taskId)
+    if (result.length === 0) return null;
 
-        return {...tasks, tags}
+    const taggingService = new TaggingService(ownerId)
+    const tags = await taggingService.getTagsForEntity('task', taskId)
+
+    return { ...result[0].task, tags }
 }
 
 export const deleteTask = async (id: number) => {

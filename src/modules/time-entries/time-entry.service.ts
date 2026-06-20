@@ -4,7 +4,7 @@ import { projects, tasks } from "../../db/schema";
 import { timeEntries } from "../../db/schema/tables/time-entries";
 
 export class TimeEntryService {
-    constructor(private ownerId: number) {}
+    constructor(private ownerId: string) {}
 
     // Get total hours for all tasks (or optionally filtered by taskId)
     getTotalHours = async (taskId?: number): Promise<number> => {

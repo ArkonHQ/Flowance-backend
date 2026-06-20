@@ -5,10 +5,23 @@ import { CreateProjectInput, UpdateProjectInput } from './project.schema';
 import { TaggingService } from '../tags/tagging.service';
 
 export const getProjectsByOwner = async (ownerId: string) => {
-    return db
+    const projectsList = await db
         .select()
         .from(projects)
         .where(eq(projects.ownerId, ownerId));
+
+    if (projectsList.length === 0) return [];
+
+    const taggingService = new TaggingService(ownerId);
+    const tagsMap = await taggingService.getTagsForEntities(
+        'project',
+        projectsList.map(p => p.id)
+    );
+
+    return projectsList.map(p => ({
+        ...p,
+        tags: tagsMap[p.id] || []
+    }));
 };
 
 export const getProjectById = async (id: number) => {

@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm"
+import { and, eq, inArray } from "drizzle-orm"
 import { db } from "../../config/db"
 import { tags } from "../../db/schema/tables/tags"
 import { taggings } from "../../db/schema/tables/taggings"
@@ -21,7 +21,7 @@ export class TaggingService {
 
   //Get all tags for an entity
   async getTagsForEntity(entityType: string, entityId: number) {
-    return await db
+    const result = await db
       .select({ tags: tags })
       .from(taggings)
       .innerJoin(tags, eq(tags.id, taggings.tagId))
@@ -31,7 +31,38 @@ export class TaggingService {
           eq(taggings.entityId, entityId),
           eq(tags.ownerId, this.ownerId)
         )
+      );
+    return result.map(r => r.tags);
+  }
+
+  // Get all tags for multiple entities efficiently
+  async getTagsForEntities(entityType: string, entityIds: number[]) {
+    if (!entityIds.length) return {}
+
+    const result = await db
+      .select({
+        entityId: taggings.entityId,
+        tag: tags
+      })
+      .from(taggings)
+      .innerJoin(tags, eq(tags.id, taggings.tagId))
+      .where(
+        and(
+          eq(taggings.entityType, entityType),
+          inArray(taggings.entityId, entityIds),
+          eq(tags.ownerId, this.ownerId)
+        )
       )
+
+    const map: Record<number, typeof tags.$inferSelect[]> = {}
+    for (const id of entityIds) map[id] = []
+    
+    for (const row of result) {
+      if (!map[row.entityId]) map[row.entityId] = []
+      map[row.entityId].push(row.tag)
+    }
+
+    return map
   }
 
   // Replace all tags for an entity set new Tags

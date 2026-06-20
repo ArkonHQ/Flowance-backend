@@ -39,24 +39,29 @@ export const getOneProject = asyncHandler(async (req: any, res: Response) => {
 
 export const createProject = asyncHandler(async (req: any, res: Response) => {
     const newProject = await projectService.createProject(req.user.id, req.body);
+
+    const { tagIds } = req.body;
+    if (tagIds !== undefined) {
+        const taggingService = new TaggingService(req.user.id);
+        await taggingService.replaceTags('project', newProject.id, tagIds);
+    }
+
+    const finalProject = await projectService.getProjectsWithTags(newProject.id, req.user.id);
+
     res.status(StatusCodes.CREATED).json({
         success: true,
-        message: "Project created",
-        project: newProject
+        project: finalProject,
+        message: "Project successfully created",
     });
 });
 
 export const updateProject = asyncHandler(async (req: any, res: Response) => {
     const project = await projectService.getProjectById(parseInt(req.params.id));
-    const ownerId = req.user.id
-    const { tagIds } = req.body
-    const projectId = Number(req.params.id)
-
 
     if (!project) {
         return res.status(StatusCodes.NOT_FOUND).json({
             success: false,
-            message: "Project not found"
+            message: 'Project not found'
         });
     }
 
@@ -67,16 +72,21 @@ export const updateProject = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    if(tagIds !== undefined) {
-        const taggingService = new TaggingService(ownerId)
-        await taggingService.replaceTags('project', projectId, tagIds)
+    const { tagIds, ...updateData } = req.body;
+
+    if (tagIds !== undefined) {
+        const taggingService = new TaggingService(req.user.id);
+        await taggingService.replaceTags('project', parseInt(req.params.id), tagIds);
     }
 
-    const updated = await projectService.updateProject(parseInt(req.params.id), req.body);
+    await projectService.updateProject(parseInt(req.params.id), updateData);
+    
+    const finalProject = await projectService.getProjectsWithTags(parseInt(req.params.id), req.user.id);
+
     res.status(StatusCodes.OK).json({
         success: true,
-        message: "Project updated successfully",
-        project: updated
+        project: finalProject,
+        message: "Project successfully updated",
     });
 });
 
