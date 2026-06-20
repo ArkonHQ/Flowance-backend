@@ -97,8 +97,16 @@ export const getTaskWihTags = async (taskId: number, ownerId: string) => {
 
     const taggingService = new TaggingService(ownerId)
     const tags = await taggingService.getTagsForEntity('task', taskId)
+    const projectTags = await taggingService.getTagsForEntity('project', result[0].project.id)
 
-    return { ...result[0].task, tags }
+    return { 
+        ...result[0].task, 
+        tags,
+        project: {
+            ...result[0].project,
+            tags: projectTags
+        }
+    }
 }
 
 export const deleteTask = async (id: number) => {

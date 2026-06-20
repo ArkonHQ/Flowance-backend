@@ -15,7 +15,6 @@ import { taggings } from "../../db/schema/tables/taggings"
 
 
 
-
 export class TaggingService {
   constructor(private ownerId: string) {}
 
