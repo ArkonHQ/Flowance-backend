@@ -809,8 +809,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "summery": {
-          "name": "summery",
+        "summary": {
+          "name": "summary",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false

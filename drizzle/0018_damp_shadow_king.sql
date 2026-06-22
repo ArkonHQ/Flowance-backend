@@ -1,1 +1,1 @@
-ALTER TABLE "tasks" ADD COLUMN "summery" varchar(255);
+ALTER TABLE "tasks" ADD COLUMN "summary" varchar(255);
