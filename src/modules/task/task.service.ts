@@ -1,6 +1,6 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { db } from '../../config/db';
-import { projects, tasks } from '../../db/schema';
+import { projects, tasks, taskMissions } from '../../db/schema';
 import { CreateTaskInput, UpdateTaskInput } from './task.schema';
 import { TaggingService } from '../tags/tagging.service';
 
@@ -18,15 +18,33 @@ export const getTasksByOwner = async (ownerId: string, projectId?: number) => {
 
     if (tasksList.length === 0) return [];
 
-    const taggingService = new TaggingService(ownerId);
+    const taskIds = tasksList.map(t => t.id);
+
+     const taggingService = new TaggingService(ownerId);
     const tagsMap = await taggingService.getTagsForEntities(
         'task',
-        tasksList.map(t => t.id)
+        taskIds
     );
+
+
+    const missionsList = await db
+        .select()
+        .from(taskMissions)
+        .where(inArray(taskMissions.taskId, taskIds));
+
+    const missionsMap = missionsList.reduce((acc: any, mission: any) => {
+        if (!acc[mission.taskId]) {
+            acc[mission.taskId] = [];
+        }
+        acc[mission.taskId].push(mission);
+        return acc;
+    }, {});
+
 
     return tasksList.map(t => ({
         ...t,
-        tags: tagsMap[t.id] || []
+        tags: tagsMap[t.id] || [],
+        missions: missionsMap[t.id] || []
     }));
 };
 
@@ -99,9 +117,16 @@ export const getTaskWihTags = async (taskId: number, ownerId: string) => {
     const tags = await taggingService.getTagsForEntity('task', taskId)
     const projectTags = await taggingService.getTagsForEntity('project', result[0].project.id)
 
+
+    const missionsList = await db
+        .select()
+        .from(taskMissions)
+        .where(eq(taskMissions.taskId, taskId));
+
     return { 
         ...result[0].task, 
         tags,
+        missions: missionsList,
         project: {
             ...result[0].project,
             tags: projectTags
