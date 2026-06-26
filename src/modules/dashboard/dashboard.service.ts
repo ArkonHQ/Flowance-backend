@@ -8,25 +8,38 @@ import { timeEntries } from '../../db/schema/tables/time-entries';
 export class DashboardService {
     constructor(private ownerId: string, private period: string = 'all') {}
 
-    private periodStart(): Date | null {
+    private periodRange(): { start: Date | null, end: Date | null } {
         const now = new Date()
         switch (this.period) {
             case '7days':
-                return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+                return { start: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), end: null }
+            case 'prev7days':
+                return { start: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000), end: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) }
             case '30days':
-                return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+                return { start: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000), end: null }
+            case 'prev30days':
+                return { start: new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000), end: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) }
             case '90days':
-                return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+                return { start: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000), end: null }
+            case 'prev90days':
+                return { start: new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000), end: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000) }
             case 'thisyear':
-                return new Date(now.getFullYear(), 0, 1)
+                return { start: new Date(now.getFullYear(), 0, 1), end: null }
+            case 'lastyear':
+                return { start: new Date(now.getFullYear() - 1, 0, 1), end: new Date(now.getFullYear(), 0, 1) }
             default:
-                return null
+                return { start: null, end: null }
         }
     }
 
     private periodFilter(column: any) {
-        const start = this.periodStart()
-        return start ? sql`${column} >= ${start}` : undefined
+        const { start, end } = this.periodRange()
+        if (start && end) {
+            return and(gte(column, start), lt(column, end))
+        } else if (start) {
+            return gte(column, start)
+        }
+        return undefined
     }
 
     // 1. Total Revenue (sum of paid invoices)
@@ -279,10 +292,16 @@ export class DashboardService {
 
         // 12. Tasks completed this week
         async getTasksCompletedThisWeek(): Promise<number> {
-            const periodStart = this.periodStart()
-            const completedAtFilter = periodStart
-                ? sql`${tasks.completedAt} >= ${periodStart}`
-                : sql`${tasks.completedAt} >= date_trunc('week', NOW())`
+            const { start, end } = this.periodRange()
+            let completedAtFilter;
+            
+            if (start && end) {
+                completedAtFilter = and(gte(tasks.completedAt, start), lt(tasks.completedAt, end))
+            } else if (start) {
+                completedAtFilter = gte(tasks.completedAt, start)
+            } else {
+                completedAtFilter = sql`${tasks.completedAt} >= date_trunc('week', NOW())`
+            }
 
             const reslut = await db
                 .select({ count: sql<number>`COUNT(*)` })
