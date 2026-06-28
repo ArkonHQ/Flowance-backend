@@ -19,6 +19,7 @@ export const updateProjectSchema = z.object({
     deadline: z.string().optional().nullable(),
     budget: z.union([z.string(), z.number()]).optional().nullable(),
     clientId: z.number().optional(),
+    isArchived: z.boolean().optional(),
     deletedAt: z.string().datetime().optional().nullable(),
     tagIds: z.array(z.number()).optional(),
 });

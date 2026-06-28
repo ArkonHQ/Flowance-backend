@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, numeric } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, integer, numeric, boolean } from 'drizzle-orm/pg-core';
 import { projectStatusEnum } from '../enums';
 import { clients } from './clients';
 import { betterAuthUser } from './auth';
@@ -16,6 +16,7 @@ export const projects = pgTable('projects', {
   ownerId: text('owner_id')
     .references(() => betterAuthUser.id, { onDelete: 'cascade' })
     .notNull(),
+  isArchived: boolean('is_archived').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
