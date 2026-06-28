@@ -1,27 +1,44 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../../config/db';
-import { projects } from '../../db/schema';
+import { projects, tasks, timeEntries } from '../../db/schema';
 import { CreateProjectInput, UpdateProjectInput } from './project.schema';
 import { TaggingService } from '../tags/tagging.service';
 
 export const getProjectsByOwner = async (ownerId: string) => {
     const projectsList = await db
-        .select()
+        .select({
+            project: projects,
+            taskCount: sql<number>`CAST(count(distinct ${tasks.id}) AS INTEGER)`,
+            completedTasks: sql<number>`CAST(count(distinct CASE WHEN ${tasks.status} = 'done' THEN ${tasks.id} END) AS INTEGER)`,
+            totalTimeTracked: sql<number>`CAST(COALESCE(sum(${timeEntries.hours}), 0) AS FLOAT) * 60`
+        })
         .from(projects)
-        .where(eq(projects.ownerId, ownerId));
+        .leftJoin(tasks, eq(projects.id, tasks.projectId))
+        .leftJoin(timeEntries, eq(tasks.id, timeEntries.taskId))
+        .where(eq(projects.ownerId, ownerId))
+        .groupBy(projects.id);
 
     if (projectsList.length === 0) return [];
 
     const taggingService = new TaggingService(ownerId);
     const tagsMap = await taggingService.getTagsForEntities(
         'project',
-        projectsList.map(p => p.id)
+        projectsList.map(p => p.project.id)
     );
 
-    return projectsList.map(p => ({
-        ...p,
-        tags: tagsMap[p.id] || []
-    }));
+    return projectsList.map(p => {
+        const total = p.taskCount || 0;
+        const completed = p.completedTasks || 0;
+        const progress = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+        return {
+            ...p.project,
+            taskCount: total,
+            totalTimeTracked: p.totalTimeTracked || 0,
+            progress: progress,
+            tags: tagsMap[p.project.id] || []
+        };
+    });
 };
 
 export const getProjectById = async (id: number) => {

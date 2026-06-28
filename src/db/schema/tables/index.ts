@@ -5,6 +5,8 @@ import { invoices } from "./invoices";
 import { tasks } from "./tasks";
 import { taskMissions } from "./missions";
 import { betterAuthUser, betterAuthSession, betterAuthAccount, betterAuthVerification } from "./auth";
+import { timeEntries } from "./time-entries";
+import { timerSessions } from "./timer-sessions";
 
 export {
     users,
@@ -16,5 +18,7 @@ export {
     betterAuthUser as user,
     betterAuthSession as session,
     betterAuthAccount as account,
-    betterAuthVerification as verification
+    betterAuthVerification as verification,
+    timeEntries,
+    timerSessions
 };
