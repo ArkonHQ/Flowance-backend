@@ -1,6 +1,6 @@
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import { db } from '../../config/db';
-import { projects, tasks, taskMissions } from '../../db/schema';
+import { projects, tasks, taskMissions, timeEntries } from '../../db/schema';
 import { CreateTaskInput, UpdateTaskInput } from './task.schema';
 import { TaggingService } from '../tags/tagging.service';
 
@@ -40,11 +40,25 @@ export const getTasksByOwner = async (ownerId: string, projectId?: number) => {
         return acc;
     }, {});
 
+    const timeEntriesList = await db
+        .select({
+            taskId: timeEntries.taskId,
+            totalHours: sql<number>`COALESCE(SUM(${timeEntries.hours}), 0)`
+        })
+        .from(timeEntries)
+        .where(inArray(timeEntries.taskId, taskIds))
+        .groupBy(timeEntries.taskId);
+
+    const timeEntriesMap = timeEntriesList.reduce((acc: any, entry: any) => {
+        acc[entry.taskId] = Number(entry.totalHours);
+        return acc;
+    }, {});
 
     return tasksList.map(t => ({
         ...t,
         tags: tagsMap[t.id] || [],
-        missions: missionsMap[t.id] || []
+        missions: missionsMap[t.id] || [],
+        totalHours: timeEntriesMap[t.id] || 0
     }));
 };
 
@@ -123,10 +137,20 @@ export const getTaskWihTags = async (taskId: number, ownerId: string) => {
         .from(taskMissions)
         .where(eq(taskMissions.taskId, taskId));
 
+    const timeEntryResult = await db
+        .select({
+            totalHours: sql<number>`COALESCE(SUM(${timeEntries.hours}), 0)`
+        })
+        .from(timeEntries)
+        .where(eq(timeEntries.taskId, taskId));
+
+    const totalHours = Number(timeEntryResult[0]?.totalHours) || 0;
+
     return { 
         ...result[0].task, 
         tags,
         missions: missionsList,
+        totalHours,
         project: {
             ...result[0].project,
             tags: projectTags
