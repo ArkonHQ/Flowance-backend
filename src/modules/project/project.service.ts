@@ -31,11 +31,29 @@ export const getProjectsByOwner = async (ownerId: string) => {
         const completed = p.completedTasks || 0;
         const progress = total === 0 ? 0 : Math.round((completed / total) * 100);
 
+        let health = 'Good';
+        if (p.project.status === 'completed') health = 'Completed';
+        else if (p.project.status === 'cancelled') health = 'Cancelled';
+        else if (p.project.status === 'on_hold') health = 'At Risk';
+        else if (p.project.status === 'planning') health = 'Planning';
+        else {
+            const deadline = p.project.deadline;
+            if (deadline) {
+                const now = new Date();
+                const isOverdue = deadline < now;
+                const isNearDeadLine = deadline < new Date(now.getTime() + 7 * 86400000); // 7 days
+                if ((isOverdue || isNearDeadLine) && progress < 50) {
+                    health = 'At Risk';
+                }
+            }
+        }
+
         return {
             ...p.project,
             taskCount: total,
             totalTimeTracked: p.totalTimeTracked || 0,
             progress: progress,
+            health: health,
             tags: tagsMap[p.project.id] || []
         };
     });
