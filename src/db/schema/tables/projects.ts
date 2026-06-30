@@ -20,4 +20,6 @@ export const projects = pgTable('projects', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
+  attachmentPath: text('attachment_path'),
+  attachmentUrl: text('attachment_url'),
 });

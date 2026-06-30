@@ -2,10 +2,10 @@ import { setDefaultResultOrder } from 'dns';
 
 setDefaultResultOrder('ipv4first');
 
+import { PORT } from './config/env';
 import app from './app';
 import connectDB from './config/db';
 import { logger } from "./utils/logger";
-import { PORT } from './config/env';
 
 const start = async () => {
     try {
