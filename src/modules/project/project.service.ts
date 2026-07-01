@@ -121,3 +121,40 @@ export const deleteProject = async (id: number) => {
         .returning();
     return deleted;
 };
+
+export const getProjectTimeChart = async (projectId: number, ownerId: string) => {
+    // Returns daily summed minutes for the last 7 days for a given project
+    const rows = await db
+        .select({
+            day: sql<string>`TO_CHAR(${timeEntries.date}, 'Dy')`,
+            date: sql<string>`DATE(${timeEntries.date})`,
+            minutes: sql<number>`CAST(COALESCE(SUM(${timeEntries.hours} * 60), 0) AS FLOAT)`,
+        })
+        .from(timeEntries)
+        .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+        .where(
+            and(
+                eq(tasks.projectId, projectId),
+                eq(timeEntries.ownerId, ownerId),
+                sql`${timeEntries.date} >= NOW() - INTERVAL '7 days'`
+            )
+        )
+        .groupBy(
+            sql`DATE(${timeEntries.date})`,
+            sql`TO_CHAR(${timeEntries.date}, 'Dy')`
+        )
+        .orderBy(sql`DATE(${timeEntries.date}) ASC`);
+
+    // Fill in missing days (0 minutes) so chart always shows 7 points
+    const result: { day: string; minutes: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2);
+        const found = rows.find(r => r.date === dateStr);
+        result.push({ day: dayLabel, minutes: found ? Math.round(found.minutes) : 0 });
+    }
+
+    return result;
+};

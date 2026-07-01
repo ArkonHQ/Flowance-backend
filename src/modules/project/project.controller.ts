@@ -114,3 +114,9 @@ export const deleteProject = asyncHandler(async (req: any, res: Response) => {
         message: "Project removed successfully"
     });
 });
+
+export const getTimeChart = asyncHandler(async (req: any, res: Response) => {
+    const projectId = parseInt(req.params.id);
+    const chart = await projectService.getProjectTimeChart(projectId, req.user.id);
+    res.status(StatusCodes.OK).json({ success: true, chart });
+});

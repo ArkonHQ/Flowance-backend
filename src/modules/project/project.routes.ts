@@ -12,6 +12,7 @@ router.use(requireAuth);
 router.use('/attachments', attachmentRoutes)
 
 router.get("/", projectController.getAllProjects);
+router.get("/:id/time-chart", projectController.getTimeChart);
 router.get("/:id", projectController.getOneProject);
 router.post("/", validate(createProjectSchema), projectController.createProject);
 router.put("/:id", validate(updateProjectSchema), projectController.updateProject);
