@@ -1,5 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
-import { projects, tasks, users } from "../../../db/schema";
+import { projects, tasks } from "../../../db/schema";
 import { asyncHandler } from "../../../utils/asyncHandler";
 import { db } from "../../../config/db";
 import { StatusCodes } from "http-status-codes";
@@ -45,16 +45,17 @@ export const addMission = asyncHandler(async (req: any, res: any) => {
   const { text, assigneeId } = req.body
   const name = text
 
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'Mission name (text) is required' })
+  }
+
   const [task] = await db
     .select()
     .from(tasks)
-    .innerJoin(projects, 
-      eq(projects.id, tasks.projectId)
-    )
     .where(
       and(
         eq(tasks.id, taskId),
-        eq(projects.ownerId, userId)
+        eq(tasks.ownerId, userId)
       )
     )
 
@@ -68,32 +69,26 @@ export const addMission = asyncHandler(async (req: any, res: any) => {
       .from(taskMissions)
       .where(eq(taskMissions.taskId, taskId))
 
-    
-      // Create new mission
+
+    // Create new mission
     const [newMission] = await db
       .insert(taskMissions)
       .values({
         taskId,
-        name,
+        name: name.trim(),
         assigneeId: assigneeId || null,
         createdAt: new Date(),
-        position: (maxPos?.max ?? -1) + 1 ,
+        updatedAt: new Date(),
+        position: (maxPos?.max ?? -1) + 1,
       })
       .returning()
-    
-    
-    // fetch user names for assignee/completedById 
-    const [fullMission] = await db
-      .select()
-      .from(taskMissions)
-      .leftJoin(users, 
-        eq( users.id, taskMissions.assigneeId)
-      )
-      .where(eq(taskMissions.id, newMission.id))
 
+    if (!newMission) {
+      console.error('[addMission] Insert returned no rows for taskId:', taskId)
+      return res.status(500).json({ error: 'Failed to create mission' })
+    }
 
-    
-   res.json({ mission: fullMission.taskMissions })
+   res.json({ mission: newMission })
 })
 
 export const toggleMission = asyncHandler(async ( req: any, res: any ) => {

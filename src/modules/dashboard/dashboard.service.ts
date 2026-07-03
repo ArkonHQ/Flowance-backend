@@ -206,8 +206,11 @@ export class DashboardService {
                 const deadline = deadlineMap.get(p.id)
                 if (!deadline) return false
                 
+                const endOfDeadline = new Date(deadline)
+                endOfDeadline.setHours(23, 59, 59, 999)
+                
                 const now = new Date()
-                const isOverdue = deadline < now
+                const isOverdue = endOfDeadline < now
                 const isNearDeadLine = deadline < new Date(now.getTime() + 7 * 86400000) // 8640000 ms is a day 
                 return (isOverdue || isNearDeadLine) && p.progress < 50
             })

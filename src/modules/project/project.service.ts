@@ -111,7 +111,7 @@ export const getProjectsWithTags = async (projectId: number, ownerId: string) =>
         const taggingService = new TaggingService(ownerId)
         const tags = await taggingService.getTagsForEntity('project', projectId)
 
-        return { project, tags }
+        return { ...project, tags }
 }
 
 export const deleteProject = async (id: number) => {
