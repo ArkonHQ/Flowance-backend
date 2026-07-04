@@ -3,7 +3,7 @@ import { users } from "./users";
 
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'member'])
-export const userTeamStatusEnum = pgEnum('user_team_status', ['invited', 'active', 'decline', 'left', 'expired'])
+export const userTeamStatusEnum = pgEnum('user_team_status', ['invited', 'active', 'declined', 'left', 'expired'])
 
 
 export const teams = pgTable('teams', {
@@ -12,10 +12,10 @@ export const teams = pgTable('teams', {
   slug: text('slug').notNull().unique(),
   description: text('description'),
   logo: text('logo'),
-  createdBy: text('created_by').references(() => users.id).notNull(),
-  updatedBy: text('updated_by').references(() => users.id),
-  deletedBy: text('deleted_by').references(() => users.id),
-  ownerId: text('owner_id').references(() => users.id).notNull(),
+  createdBy: integer('created_by').references(() => users.id).notNull(),
+  updatedBy: integer('updated_by').references(() => users.id),
+  deletedBy: integer('deleted_by').references(() => users.id),
+  ownerId: integer('owner_id').references(() => users.id).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   deletedAt: timestamp('deleted_at'),
@@ -35,8 +35,8 @@ export const teamMembers = pgTable('team_members', {
   joinedAt: timestamp('joined_at'),
   leftAt: timestamp('left_at'),
   lastActiveAt: timestamp('last_active_at'),
-  createdBy: text('created_by').references(() => users.id),
-  updatedBy: text('updated_by').references(() => users.id),
+  createdBy: integer('created_by').references(() => users.id),
+  updatedBy: integer('updated_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })

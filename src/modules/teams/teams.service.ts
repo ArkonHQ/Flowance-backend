@@ -388,6 +388,4 @@ export class TeamService {
 
       return {message: 'Ownership transferred successfully'}
   }
-
-
 }

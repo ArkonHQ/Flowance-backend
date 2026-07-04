@@ -169,6 +169,20 @@
       "when": 1782796723251,
       "tag": "0023_busy_xavin",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1783290677091,
+      "tag": "0024_dizzy_rawhide_kid",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1783290842278,
+      "tag": "0025_confused_prism",
+      "breakpoints": true
     }
   ]
 }

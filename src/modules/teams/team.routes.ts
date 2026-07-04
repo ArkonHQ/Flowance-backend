@@ -2,7 +2,7 @@ import { Router } from "express"
 import { requireTeamRole } from "../../middleware/teamAuthorization.middleware" 
 import { authenticate } from "../../middleware/authenticate.middleware" 
 import { getTeam, updateTeam, deleteTeam, removeMember, leaveTeam, transferOwnership, getUserTeams  } from "./teams.controller" 
-import { inviteMember } from "../team-members/teamMembers.controller" 
+import { acceptInvitation, declineInvitation, inviteMember } from "../team-members/teamMembers.controller" 
 
 const router = Router()
 

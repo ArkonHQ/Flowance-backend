@@ -12,9 +12,9 @@ import crypto from "crypto";
 
 export class TeamMembersService {
 
-  constructor(private inviterId: string) { }
+  constructor(private inviterId: number) { }
 
-  async inviteUser(teamSlug: string, inviteeId: string) {
+  async inviteUser(teamSlug: string, inviteeId: number) {
     // 1. Find the team by its slug
     const team = await db
       .select()
@@ -88,6 +88,88 @@ export class TeamMembersService {
 
 
   async acceptInvitation(token: string) {
-    // 1. Find the membership row 
+    // 1. Find the membership row that matches the token 
+    const membership = await db
+      .select()
+      .from(teamMembers)
+      .where(eq(teamMembers.invitationToken, token))
+  
+    
+    if (!membership) throw new Error ('Invalid invitation token')
+
+    // 2. Ensure the invitation belongs to the authenticated user
+    if (membership[0].userId !== this.inviterId) throw new Error ('This invitation is not for your account')
+
+    // 3. check expiry
+    if (membership[0].invitationExpiresAt && new Date(membership[0].invitationExpiresAt) < new Date () ) {
+      // Mark as expired so it's clear
+      await db 
+        .update(teamMembers)
+        .set({
+          status: 'expired',
+          updatedAt: new Date()
+        })
+        .where(eq(teamMembers.id, membership[0].id))
+
+      throw new Error ('Invitaion has expired')
+    }
+
+    // 5. Accept: update the membership
+    const [updated] = await db
+      .update(teamMembers)
+      .set({
+        status: 'active',
+        joinedAt: new Date(),
+        invitationExpiresAt: null,
+        invitationToken: null,
+        lastActiveAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(teamMembers.id, membership[0].id))
+      .returning()
+
+
+    return updated
+  }
+
+
+  async declineInvitation (token: string) {
+    const membership = await db
+      .select()
+      .from(teamMembers)
+      .where(eq(teamMembers.invitationToken, token))
+
+
+    if (!membership) throw new Error ('Invalid invitation token')
+    if (membership[0].userId !== this.inviterId) throw new Error ('This invitation is not for your account')
+
+    if (membership[0].status !== 'invited') throw new Error ('Invalid invitation status')
+
+    if (membership[0].invitationExpiresAt && new Date(membership[0].invitationExpiresAt) < new Date () ) {
+      // Mark as expired so it's clear
+      await db 
+        .update(teamMembers)
+        .set({
+          status: 'expired',
+          updatedAt: new Date()
+        })
+        .where(eq(teamMembers.id, membership[0].id))
+
+      throw new Error ('Invitaion has expired')
+    }
+
+    // Mark as declined
+    const [updated] = await db
+      .update(teamMembers)
+      .set({
+        status: 'declined',
+        updatedAt: new Date(),
+        invitationToken: null,
+        invitationExpiresAt: null,
+      })
+      .where(eq(teamMembers.id, membership[0].id))
+      .returning()
+
+    return updated
   }
 }
