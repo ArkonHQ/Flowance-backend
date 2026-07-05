@@ -81,7 +81,7 @@ export const removeMember = asyncHandler (async (req: any, res: any) => {
     const userId = req.user.id
     const { slug, memberId } = req.params
     const service = new TeamService(userId)
-    const result = await service.removeMember(slug, memberId)
+    const result = await service.removeMember(slug, Number(memberId))
     return res.status(StatusCodes.OK).json({
       success: true,
       message: 'Member removed successfully',
@@ -141,7 +141,7 @@ export const transferOwnership = asyncHandler (async (req: any, res: any) => {
     const { slug } = req.params
     const { newOwnerId } = req.body
     const service = new TeamService(userId)
-    const result = await service.transferOwnership(slug, newOwnerId)
+    const result = await service.transferOwnership(slug, Number(newOwnerId))
     return res.status(StatusCodes.OK).json({
       success: true,
       message: 'Ownership transferred successfully',

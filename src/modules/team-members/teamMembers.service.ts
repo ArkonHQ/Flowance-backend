@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../../config/db";
 import { teamMembers, teams } from "../../db/schema/tables/teams";
-import { user } from "../../db/schema";
+import { users } from "../../db/schema/tables/users";
 import crypto from "crypto";
 
 
@@ -26,8 +26,8 @@ export class TeamMembersService {
     // 2. Confirm the user to be invited really exists
     const invitee = await db
       .select()
-      .from(user)
-      .where(eq(user.id, inviteeId))
+      .from(users)
+      .where(eq(users.id, inviteeId))
 
     if (!invitee) throw new Error('User not found');
 
@@ -42,7 +42,7 @@ export class TeamMembersService {
         )
       )
 
-    if (existingMembership) {
+    if (existingMembership.length > 0) {
       // Active member -> already in the team
       if (existingMembership[0].status === 'active') {
         throw new Error('User is already a member of this team');

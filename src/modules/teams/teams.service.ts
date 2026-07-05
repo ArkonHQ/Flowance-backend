@@ -1,6 +1,6 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "../../config/db";
-import { teamMembers, teamMembers, teams } from "../../db/schema/tables/teams";
+import { teamMembers, teams } from "../../db/schema/tables/teams";
 import { user, users } from "../../db/schema";
 import { set, slugify } from "zod";
 
@@ -8,7 +8,7 @@ import { set, slugify } from "zod";
 
 
 export class TeamService {
-  constructor (private userId: string) {}
+  constructor (private userId: number) {}
 
 
   async getTeamWithMembers(slug: string) {
@@ -40,6 +40,12 @@ export class TeamService {
       const isAdminOrOwner = effectiveRole === 'owner' || effectiveRole === 'admin'
 
       // 4. Fetch members based on role
+      const conditions = [eq(teamMembers.teamId, team[0].id)];
+      if (!isAdminOrOwner) {
+        // Regular members only see active members
+        conditions.push(eq(teamMembers.status, "active"));
+      }
+
       let membersQuery = db 
         .select({
         membershipId: teamMembers.id,
@@ -54,15 +60,8 @@ export class TeamService {
         userAvatar: users.image,
         })
         .from(teamMembers)
-        .innerJoin(users, eq(user.id, teamMembers.userId))
-        .where(eq (teamMembers.teamId, team[0].id))
-
-          if (!isAdminOrOwner) {
-      // Regular members only see active members
-      membersQuery = membersQuery[0].where(eq(teamMembers.status, "active"));
-    } else {
-      // Admins see all statuses
-    }
+        .innerJoin(users, eq(users.id, teamMembers.userId))
+        .where(and(...conditions));
 
     const members = await membersQuery
 
@@ -150,7 +149,7 @@ export class TeamService {
 
 
 
-  async removeMember (teamSlug: string, memberUserId: string) {
+  async removeMember (teamSlug: string, memberUserId: number) {
     // Fetch team and check authorization
     const team = await db
       .select()
@@ -184,7 +183,7 @@ export class TeamService {
       .from(teamMembers)
       .where(
         and(
-          eq(teamMembers.teamId, team[0].id)
+          eq(teamMembers.teamId, team[0].id),
           eq(teamMembers.userId, memberUserId)
         )
       )
@@ -212,7 +211,7 @@ export class TeamService {
   }
 
 
-  async changeMemberRole (teamSlug: string, memberUserId: string, newRole: 'admin' | 'member') {
+  async changeMemberRole (teamSlug: string, memberUserId: number, newRole: 'admin' | 'member') {
     const team = await db
       .select()
       .from(teams)
@@ -332,8 +331,7 @@ export class TeamService {
     const teamsData = await db
       .select()
       .from(teams)
-      .where(inArray(teams.id, teamIds))
-      .where(eq(teams.deletedAt, null))
+      .where(and(inArray(teams.id, teamIds), isNull(teams.deletedAt)))
       
 
     return teamsData
@@ -341,7 +339,7 @@ export class TeamService {
 
 
   // Transfer Ownership
-  async transferOwnership (teamSlug: string, newOwnerId: string) {
+  async transferOwnership (teamSlug: string, newOwnerId: number) {
     const team = await db
       .select()
       .from(teams)
