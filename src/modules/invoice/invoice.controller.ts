@@ -4,7 +4,7 @@ import * as invoiceService from "./invoice.service";
 import { asyncHandler } from "../../utils/asyncHandler";
 
 export const getAllInvoices = asyncHandler(async (req: any, res: Response) => {
-    const allInvoices = await invoiceService.getInvoicesByOwner(req.user.id);
+    const allInvoices = await invoiceService.getInvoicesByTeam(req.teamContext.teamId);
     res.json({ success: true, invoices: allInvoices });
 });
 
@@ -15,7 +15,7 @@ export const getOneInvoice = asyncHandler(async (req: any, res: Response) => {
         return res.status(StatusCodes.NOT_FOUND).json({ message: 'Invoice not found' });
     }
 
-    if (invoice.ownerId !== req.user.id) {
+    if (invoice.teamId !== req.teamContext.teamId) {
         return res.status(StatusCodes.FORBIDDEN).json({ message: 'Not authorized' });
     }
 
@@ -23,7 +23,7 @@ export const getOneInvoice = asyncHandler(async (req: any, res: Response) => {
 });
 
 export const createInvoice = asyncHandler(async (req: any, res: Response) => {
-    const newInvoice = await invoiceService.createInvoice(req.user.id, req.body);
+    const newInvoice = await invoiceService.createInvoice(req.user.id, req.teamContext.teamId, req.body);
     res.status(StatusCodes.CREATED).json({ success: true, invoice: newInvoice });
 });
 
@@ -34,7 +34,7 @@ export const updateInvoice = asyncHandler(async (req: any, res: Response) => {
         return res.status(StatusCodes.NOT_FOUND).json({ message: 'Invoice not found' });
     }
 
-    if (invoice.ownerId !== req.user.id) {
+    if (invoice.teamId !== req.teamContext.teamId) {
         return res.status(StatusCodes.FORBIDDEN).json({ message: 'Not authorized' });
     }
 
@@ -49,7 +49,7 @@ export const deleteInvoice = asyncHandler(async (req: any, res: Response) => {
         return res.status(StatusCodes.NOT_FOUND).json({ message: 'Invoice not found' });
     }
 
-    if (invoice.ownerId !== req.user.id) {
+    if (invoice.teamId !== req.teamContext.teamId) {
         return res.status(StatusCodes.FORBIDDEN).json({ message: 'Not authorized' });
     }
 

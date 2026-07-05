@@ -4,8 +4,8 @@ import { projects, tasks, taskMissions, timeEntries } from '../../db/schema';
 import { CreateTaskInput, UpdateTaskInput } from './task.schema';
 import { TaggingService } from '../tags/tagging.service';
 
-export const getTasksByOwner = async (ownerId: string, projectId?: number) => {
-    let conditions = [eq(tasks.ownerId, ownerId)];
+export const getTasksByTeam = async (teamId: number, projectId?: number) => {
+    let conditions = [eq(tasks.teamId, teamId)];
 
     if (projectId) {
         conditions.push(eq(tasks.projectId, projectId));
@@ -20,7 +20,7 @@ export const getTasksByOwner = async (ownerId: string, projectId?: number) => {
 
     const taskIds = tasksList.map(t => t.id);
 
-     const taggingService = new TaggingService(ownerId);
+     const taggingService = new TaggingService(teamId);
     const tagsMap = await taggingService.getTagsForEntities(
         'task',
         taskIds
@@ -62,15 +62,15 @@ export const getTasksByOwner = async (ownerId: string, projectId?: number) => {
     }));
 };
 
-export const getTaskById = async (id: number, ownerId: string) => {
+export const getTaskById = async (id: number, teamId: number) => {
     const result = await db
         .select()
         .from(tasks)
-        .where(and(eq(tasks.id, id), eq(tasks.ownerId, ownerId)));
+        .where(and(eq(tasks.id, id), eq(tasks.teamId, teamId)));
     return result[0];
 };
 
-export const createTask = async (ownerId: string, data: CreateTaskInput) => {
+export const createTask = async (ownerId: string, teamId: number, data: CreateTaskInput) => {
     const status = data.status || 'todo';
     const [newTask] = await db
         .insert(tasks)
@@ -83,7 +83,8 @@ export const createTask = async (ownerId: string, data: CreateTaskInput) => {
             deadline: data.deadline ? new Date(data.deadline) : null,
             projectId: data.projectId,
             ownerId,
-            completedAt: status === 'done' ? new Date() : null
+            completedAt: status === 'done' ? new Date() : null,
+            teamId: teamId
         })
         .returning();
     return newTask;
@@ -110,7 +111,7 @@ export const updateTask = async (id: number, data: UpdateTaskInput) => {
     return updated;
 };
 
-export const getTaskWihTags = async (taskId: number, ownerId: string) => {
+export const getTaskWihTags = async (taskId: number, teamId: number, ownerId: string) => {
     const result = await db
         .select({
             task: tasks,
@@ -121,7 +122,7 @@ export const getTaskWihTags = async (taskId: number, ownerId: string) => {
         .where(
             and(
                 eq(tasks.id, taskId),
-                eq(projects.ownerId, ownerId)
+                eq(tasks.teamId, teamId)
             )
         )
 

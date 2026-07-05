@@ -6,7 +6,8 @@ import { DashboardService } from "./dashboard.service";
 
 export const getDashboard = asyncHandler(async (req: any, res: any) => {
     const period = String(req.query?.period ?? 'all')
-    const service = new DashboardService(req.user.id, period)
+    const teamId = req.teamContext?.teamId ? Number(req.teamContext?.teamId) : undefined;
+    const service = new DashboardService(req.user.id, period, teamId)
     const data = await Promise.all([
         service.getTotalRevenue(),
         service.getActiveProjectsCount(),
@@ -79,7 +80,8 @@ export const getDashboard = asyncHandler(async (req: any, res: any) => {
 
 
 export const getMonthlyHealthMetric = asyncHandler(async (req: any, res: any) => {
-    const service = new DashboardService(req.user.id)
+    const teamId = req.teamContext?.teamId ? Number(req.teamContext.teamId) : undefined;
+    const service = new DashboardService(req.user.id, 'all', teamId)
     const metrics = await service.getMonthlyHealth()
 
     res.json({
@@ -90,7 +92,8 @@ export const getMonthlyHealthMetric = asyncHandler(async (req: any, res: any) =>
 
 
 export const getTrends = asyncHandler(async (req: any, res: any) => {
-    const service = new DashboardService(req.user.id)
+    const teamId = req.teamContext?.teamId ? Number(req.teamContext.teamId) : undefined;
+    const service = new DashboardService(req.user.id, 'all', teamId)
     const lastMonth = await service.getLastMonthKPIs()
 
     res.json({

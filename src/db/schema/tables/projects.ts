@@ -2,6 +2,7 @@ import { pgTable, serial, text, timestamp, integer, numeric, boolean } from 'dri
 import { projectStatusEnum } from '../enums';
 import { clients } from './clients';
 import { betterAuthUser } from './auth';
+import { teams } from './teams';
 
 export const projects = pgTable('projects', {
   id: serial('id').primaryKey(),
@@ -16,6 +17,8 @@ export const projects = pgTable('projects', {
   ownerId: text('owner_id')
     .references(() => betterAuthUser.id, { onDelete: 'cascade' })
     .notNull(),
+  teamId: integer('team_id')
+    .references(() => teams.id, { onDelete: 'cascade' }),
   isArchived: boolean('is_archived').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

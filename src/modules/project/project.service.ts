@@ -4,7 +4,7 @@ import { projects, tasks, timeEntries } from '../../db/schema';
 import { CreateProjectInput, UpdateProjectInput } from './project.schema';
 import { TaggingService } from '../tags/tagging.service';
 
-export const getProjectsByOwner = async (ownerId: string) => {
+export const getProjectsByTeam = async (teamId: number, ownerId: string) => {
     const projectsList = await db
         .select({
             project: projects,
@@ -15,7 +15,7 @@ export const getProjectsByOwner = async (ownerId: string) => {
         .from(projects)
         .leftJoin(tasks, eq(projects.id, tasks.projectId))
         .leftJoin(timeEntries, eq(tasks.id, timeEntries.taskId))
-        .where(eq(projects.ownerId, ownerId))
+        .where(eq(projects.teamId, teamId))
         .groupBy(projects.id);
 
     if (projectsList.length === 0) return [];
@@ -67,7 +67,7 @@ export const getProjectById = async (id: number) => {
     return result[0];
 };
 
-export const createProject = async (ownerId: string, data: CreateProjectInput) => {
+export const createProject = async (ownerId: string, teamId: number, data: CreateProjectInput) => {
     const [newProject] = await db
         .insert(projects)
         .values({
@@ -78,6 +78,7 @@ export const createProject = async (ownerId: string, data: CreateProjectInput) =
             budget: data.budget ? data.budget.toString() : null,
             clientId: data.clientId,
             ownerId: ownerId,
+            teamId: teamId,
         })
         .returning();
     return newProject;
@@ -96,7 +97,7 @@ export const updateProject = async (id: number, data: UpdateProjectInput) => {
     return updated;
 };
 
-export const getProjectsWithTags = async (projectId: number, ownerId: string) => {
+export const getProjectsWithTags = async (projectId: number, teamId: number, ownerId: string) => {
 
     const [project] = await db
         .select()
@@ -104,7 +105,7 @@ export const getProjectsWithTags = async (projectId: number, ownerId: string) =>
         .where(
             and(
                 eq(projects.id, projectId),
-                eq(projects.ownerId, ownerId)
+                eq(projects.teamId, teamId)
             )
         )
 
@@ -122,7 +123,7 @@ export const deleteProject = async (id: number) => {
     return deleted;
 };
 
-export const getProjectTimeChart = async (projectId: number, ownerId: string) => {
+export const getProjectTimeChart = async (projectId: number, teamId: number) => {
     // Returns daily summed minutes for the last 7 days for a given project
     const rows = await db
         .select({
@@ -132,10 +133,11 @@ export const getProjectTimeChart = async (projectId: number, ownerId: string) =>
         })
         .from(timeEntries)
         .innerJoin(tasks, eq(timeEntries.taskId, tasks.id))
+        .innerJoin(projects, eq(tasks.projectId, projects.id))
         .where(
             and(
                 eq(tasks.projectId, projectId),
-                eq(timeEntries.ownerId, ownerId),
+                eq(projects.teamId, teamId),
                 sql`${timeEntries.date} >= NOW() - INTERVAL '7 days'`
             )
         )

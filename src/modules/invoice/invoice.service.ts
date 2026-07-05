@@ -3,11 +3,11 @@ import { db } from '../../config/db';
 import { invoices } from '../../db/schema';
 import { CreateInvoiceInput, UpdateInvoiceInput } from './invoice.schema';
 
-export const getInvoicesByOwner = async (ownerId: string) => {
+export const getInvoicesByTeam = async (teamId: number) => {
     return db
         .select()
         .from(invoices)
-        .where(eq(invoices.ownerId, ownerId));
+        .where(eq(invoices.teamId, teamId));
 };
 
 export const getInvoiceById = async (id: number) => {
@@ -18,7 +18,7 @@ export const getInvoiceById = async (id: number) => {
     return result[0];
 };
 
-export const createInvoice = async (ownerId: string, data: CreateInvoiceInput) => {
+export const createInvoice = async (ownerId: string, teamId: number, data: CreateInvoiceInput) => {
     const [newInvoice] = await db
         .insert(invoices)
         .values({
@@ -28,6 +28,7 @@ export const createInvoice = async (ownerId: string, data: CreateInvoiceInput) =
             clientId: data.clientId,
             projectId: data.projectId || null,
             ownerId: ownerId,
+            teamId: teamId,
         })
         .returning();
     return newInvoice;

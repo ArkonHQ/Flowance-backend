@@ -6,7 +6,7 @@ import { timeEntries } from '../../db/schema/tables/time-entries';
 
 
 export class DashboardService {
-    constructor(private ownerId: string, private period: string = 'all') {}
+    constructor(private ownerId: string, private period: string = 'all', private teamId?: number) {}
 
     private periodRange(): { start: Date | null, end: Date | null } {
         const now = new Date()
@@ -49,7 +49,7 @@ export class DashboardService {
             .select({ total: sql<number>`COALESCE (sum(${invoices.amount}), 0)` })
             .from(invoices)
             .where(and(
-                eq(invoices.ownerId, this.ownerId),
+                eq(invoices.ownerId, this.ownerId), this.teamId ? eq(invoices.teamId, this.teamId) : undefined,
                 eq(invoices.status, 'paid'),
                 ...(dateFilter ? [dateFilter] : [])
             ))
@@ -62,7 +62,7 @@ export class DashboardService {
         const result = await db
             .select({ count: sql<number>`COUNT(*)` })
             .from(projects)
-            .where(and(eq(projects.ownerId, this.ownerId), eq(projects.status, 'active')))
+            .where(and(eq(projects.ownerId, this.ownerId), this.teamId ? eq(projects.teamId, this.teamId) : undefined, eq(projects.status, 'active')))
             
             return result[0]?.count ?? 0
     }
@@ -76,7 +76,7 @@ export class DashboardService {
             .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
             .innerJoin(projects, eq(projects.id, tasks.projectId))
             .where(and(
-                eq(projects.ownerId, this.ownerId),
+                eq(projects.ownerId, this.ownerId), this.teamId ? eq(projects.teamId, this.teamId) : undefined,
                 ...(dateFilter ? [dateFilter] : [])
             ))
         return result[0]?.totalHours ?? 0
@@ -89,7 +89,7 @@ export class DashboardService {
             .select({ count: sql<number>`COUNT(*)` })
             .from(invoices)
             .where(and(
-                eq(invoices.ownerId, this.ownerId),
+                eq(invoices.ownerId, this.ownerId), this.teamId ? eq(invoices.teamId, this.teamId) : undefined,
                 inArray(invoices.status, ['sent', 'overdue']),
                 ...(dateFilter ? [dateFilter] : [])
             ))
@@ -107,7 +107,7 @@ export class DashboardService {
             })
             .from(projects)
             .leftJoin(tasks, eq(tasks.projectId, projects.id))
-            .where(eq(projects.ownerId, this.ownerId))
+            .where(and(eq(projects.ownerId, this.ownerId), this.teamId ? eq(projects.teamId, this.teamId) : undefined))
             .groupBy(projects.id, projects.title)
             
         return projectsWithTasks.map(p => ({
@@ -127,7 +127,7 @@ export class DashboardService {
                 createdAt: invoices.updatedAt,
             })
             .from(invoices)
-            .where(and(eq(invoices.ownerId, this.ownerId), ...(activityFilter ? [activityFilter] : [])))
+            .where(and(eq(invoices.ownerId, this.ownerId), this.teamId ? eq(invoices.teamId, this.teamId) : undefined, ...(activityFilter ? [activityFilter] : [])))
 
             const taskFilter = this.periodFilter(tasks.updatedAt)
             const taskActivity = db
@@ -138,7 +138,7 @@ export class DashboardService {
                 })
                 .from(tasks)
                 .innerJoin(projects, eq(projects.id, tasks.projectId))
-                .where(and(eq(projects.ownerId, this.ownerId), ...(taskFilter ? [taskFilter] : [])))
+                .where(and(eq(projects.ownerId, this.ownerId), this.teamId ? eq(projects.teamId, this.teamId) : undefined, ...(taskFilter ? [taskFilter] : [])))
 
                 const projectFilter = this.periodFilter(projects.updatedAt)
                 const projectActivity = db
@@ -148,7 +148,7 @@ export class DashboardService {
                         createdAt: projects.updatedAt,
                     })
                     .from(projects)
-                    .where(and(eq(projects.ownerId, this.ownerId), ...(projectFilter ? [projectFilter] : [])))
+                    .where(and(eq(projects.ownerId, this.ownerId), this.teamId ? eq(projects.teamId, this.teamId) : undefined, ...(projectFilter ? [projectFilter] : [])))
 
                     const activityUnion = invoiceActivity
                         .unionAll(taskActivity)
@@ -177,7 +177,7 @@ export class DashboardService {
             .from(tasks)
             .innerJoin(projects, eq(projects.id, tasks.projectId))
             .where(and(
-                eq(projects.ownerId, this.ownerId),
+                eq(projects.ownerId, this.ownerId), this.teamId ? eq(projects.teamId, this.teamId) : undefined,
                 sql`${tasks.status} != 'done'`,
                 sql`${tasks.deadline} BETWEEN NOW() AND NOW() + INTERVAL '7 days'`
             ))
@@ -198,7 +198,7 @@ export class DashboardService {
                 id: projects.id, deadline: projects.deadline, 
             })
             .from(projects)
-            .where(eq(projects.ownerId, this.ownerId))
+            .where(and(eq(projects.ownerId, this.ownerId), this.teamId ? eq(projects.teamId, this.teamId) : undefined))
 
             const deadlineMap = new Map(prjectData.map(p => [p.id, p.deadline]))
 
@@ -228,7 +228,7 @@ export class DashboardService {
             })
             .from(projects)
             .where(and(
-                eq(projects.ownerId, this.ownerId),
+                eq(projects.ownerId, this.ownerId), this.teamId ? eq(projects.teamId, this.teamId) : undefined,
                 sql`${projects.deadline} BETWEEN NOW() AND NOW() + INTERVAL '30 days'`
             ))
 
@@ -241,7 +241,7 @@ export class DashboardService {
             .from(tasks)
             .innerJoin(projects, eq(projects.id, tasks.projectId))
             .where(and(
-                eq(projects.ownerId, this.ownerId),
+                eq(projects.ownerId, this.ownerId), this.teamId ? eq(projects.teamId, this.teamId) : undefined,
                 sql`${tasks.status} != 'done'`,
                 sql`${tasks.deadline} BETWEEN NOW() AND NOW() + INTERVAL '30 days'`
             ))
@@ -262,7 +262,7 @@ export class DashboardService {
             .innerJoin(users, eq(users.id, tasks.assignedTo))
             .innerJoin(projects, eq(projects.id, tasks.projectId))
             .where(and(
-                eq(projects.ownerId, this.ownerId),
+                eq(projects.ownerId, this.ownerId), this.teamId ? eq(projects.teamId, this.teamId) : undefined,
                 eq(tasks.status, 'done'),
                 sql`${tasks.completedAt} >= NOW() - INTERVAL '30 days'`
             ))
@@ -285,7 +285,7 @@ export class DashboardService {
                 .leftJoin(tasks, and(
                     eq(users.id, tasks.assignedTo), 
                     sql`${tasks.status} != 'done'`,
-                    eq(tasks.ownerId, this.ownerId)
+                    eq(tasks.ownerId, this.ownerId), this.teamId ? eq(tasks.teamId, this.teamId) : undefined
                 ))
                 .groupBy(users.id, users.name)
 
@@ -311,7 +311,7 @@ export class DashboardService {
                 .from(tasks)
                 .innerJoin(projects, eq(projects.id, tasks.projectId))
                 .where(and(
-                    eq(projects.ownerId, this.ownerId),
+                    eq(projects.ownerId, this.ownerId), this.teamId ? eq(projects.teamId, this.teamId) : undefined,
                     eq(tasks.status, 'done'),
                     completedAtFilter
                 )) 
@@ -327,7 +327,7 @@ export class DashboardService {
             .select({ total: sql<number>`COALESCE(SUM(${invoices.amount}), 0)` })
             .from(invoices)
             .where(and(
-                eq(invoices.ownerId, this.ownerId),
+                eq(invoices.ownerId, this.ownerId), this.teamId ? eq(invoices.teamId, this.teamId) : undefined,
                 inArray(invoices.status, ['sent', 'overdue']),
                 ...(dateFilter ? [dateFilter] : [])
             ))
@@ -347,11 +347,11 @@ export class DashboardService {
                 WITH monthly_activity AS (
                     SELECT client_id, DATE_TRUNC('month', created_at) AS month
                     FROM invoices
-                    WHERE owner_id = ${this.ownerId}
+                    WHERE owner_id = ${this.ownerId} ${this.teamId ? sql`AND team_id = ${this.teamId}` : sql``}
                     UNION
                     SELECT client_id, DATE_TRUNC('month', created_at) AS month
                     FROM projects
-                    WHERE owner_id = ${this.ownerId}
+                    WHERE owner_id = ${this.ownerId} ${this.teamId ? sql`AND team_id = ${this.teamId}` : sql``}
                 ),
                 active_monthly AS (
                     SELECT month, COUNT(DISTINCT client_id) AS active_count,
@@ -434,7 +434,7 @@ export class DashboardService {
                 .from(invoices)
                 .where(
                     and(
-                        eq(invoices.ownerId, this.ownerId),
+                        eq(invoices.ownerId, this.ownerId), this.teamId ? eq(invoices.teamId, this.teamId) : undefined,
                         eq(invoices.status, 'paid'),
                         sql`${invoices.paidAt} >= date_trunc('month', NOW()) - INTERVAL '1 month'`,
                         sql`${invoices.paidAt} < date_trunc('month', NOW())`
@@ -450,7 +450,7 @@ export class DashboardService {
                 .from(projects)
                 .where(
                     and(
-                        eq(projects.ownerId, this.ownerId),
+                        eq(projects.ownerId, this.ownerId), this.teamId ? eq(projects.teamId, this.teamId) : undefined,
                         eq(projects.status, 'active')
                     )
                 )
@@ -466,7 +466,7 @@ export class DashboardService {
                 .innerJoin(projects, eq(projects.id, tasks.projectId))
                 .where(
                     and(
-                        eq(projects.ownerId, this.ownerId),
+                        eq(projects.ownerId, this.ownerId), this.teamId ? eq(projects.teamId, this.teamId) : undefined,
                         sql`${timeEntries.date} >= date_trunc('month', NOW()) - INTERVAL '1 month'`,
                         sql`${timeEntries.date} < date_trunc('month', NOW())`
                     )
@@ -481,7 +481,7 @@ export class DashboardService {
                 .from(invoices)
                 .where(
                     and(
-                        eq(invoices.ownerId, this.ownerId),
+                        eq(invoices.ownerId, this.ownerId), this.teamId ? eq(invoices.teamId, this.teamId) : undefined,
                         inArray(invoices.status, ['sent', 'overdue'])
                     )
                 )
@@ -495,7 +495,7 @@ export class DashboardService {
                 .from(invoices)
                 .where(
                     and(
-                        eq(invoices.ownerId, this.ownerId),
+                        eq(invoices.ownerId, this.ownerId), this.teamId ? eq(invoices.teamId, this.teamId) : undefined,
                         inArray(invoices.status, ['sent', 'overdue'])
                     )
                 )
@@ -510,7 +510,7 @@ export class DashboardService {
                 .innerJoin(projects, eq(projects.id, tasks.projectId))
                 .where(
                     and(
-                        eq(projects.ownerId, this.ownerId),
+                        eq(projects.ownerId, this.ownerId), this.teamId ? eq(projects.teamId, this.teamId) : undefined,
                         eq(tasks.status, 'done'),
                         sql`${tasks.completedAt} >= date_trunc('month', NOW()) - INTERVAL '1 month'`,
                         sql`${tasks.completedAt} < date_trunc('month', NOW())` 

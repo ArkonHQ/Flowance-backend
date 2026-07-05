@@ -1,11 +1,16 @@
 import { Router } from "express";
-import { requireAuth } from "../../middleware/auth.middleware";
+import { authenticate } from "../../middleware/authenticate.middleware";
+import { resolveTeam } from "../../middleware/resolveTeam.middleware";
+import { requirePermission } from "../../middleware/requirePermission.middleware";
 import { getDashboard, getMonthlyHealthMetric, getTrends } from "./dashboard.controller";
 
-const router = Router();
+const router = Router({ mergeParams: true });
 
-router.get('/', requireAuth, getDashboard)
-router.get('/monthly-health', requireAuth, getMonthlyHealthMetric)
-router.get('/trends', requireAuth, getTrends)
+router.use(authenticate);
+router.use(resolveTeam);
+
+router.get('/', requirePermission('dashboard:read'), getDashboard)
+router.get('/monthly-health', requirePermission('dashboard:read'), getMonthlyHealthMetric)
+router.get('/trends', requirePermission('dashboard:read'), getTrends)
 
 export default router;

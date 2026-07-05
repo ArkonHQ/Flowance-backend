@@ -4,18 +4,28 @@ import { requireAuth } from "../../middleware/auth.middleware";
 import { validate } from "../../middleware/validate.middleware";
 import { createProjectSchema, updateProjectSchema } from "./project.schema";
 import attachmentRoutes from "./attachments/attachment.routes";
+import { resolveTeam } from "../../middleware/resolveTeam.middleware";
+import { authenticate } from "../../middleware/authenticate.middleware";
+import { requirePermission } from "../../middleware/requirePermission.middleware";
 
-const router = Router();
 
-router.use(requireAuth);
+const router = Router({ mergeParams: true });
+
+router.use(authenticate);
 
 router.use('/attachments', attachmentRoutes)
 
-router.get("/", projectController.getAllProjects);
-router.get("/:id/time-chart", projectController.getTimeChart);
-router.get("/:id", projectController.getOneProject);
-router.post("/", validate(createProjectSchema), projectController.createProject);
-router.put("/:id", validate(updateProjectSchema), projectController.updateProject);
-router.delete("/:id", projectController.deleteProject);
+router.use(resolveTeam)
+
+
+
+router.get("/", requirePermission('project:read'), projectController.getAllProjects);
+router.get("/:id/time-chart", requirePermission('project:read'), projectController.getTimeChart);
+router.get("/:id", requirePermission('project:read'), projectController.getOneProject);
+router.post("/", requirePermission('project:write'), validate(createProjectSchema), projectController.createProject);
+router.put("/:id", requirePermission('project:write'), validate(updateProjectSchema), projectController.updateProject);
+router.delete("/:id", requirePermission('project:write'), projectController.deleteProject);
+
+
 
 export default router;

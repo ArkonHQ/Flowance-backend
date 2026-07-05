@@ -4,6 +4,7 @@ import { invoiceStatusEnum } from "../enums";
 import { clients } from "./clients";
 import { projects } from "./projects";
 import { betterAuthUser } from "./auth";
+import { teams } from "./teams";
 
 export const invoices = pgTable('invoices', {
     id: serial('id').primaryKey(),
@@ -19,6 +20,8 @@ export const invoices = pgTable('invoices', {
     ownerId: text('owner_id')
         .references(() => betterAuthUser.id, { onDelete: 'cascade' })
         .notNull(),
+    teamId: integer('team_id')
+        .references(() => teams.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
     deletedAt: timestamp("deleted_at"),

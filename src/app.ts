@@ -24,13 +24,13 @@ app.use('/api/auth', toNodeHandler(auth.handler));
 
 app.use('/api/clients', clientRouter);
 
-app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/teams/:slug/dashboard', dashboardRoutes);
 
-app.use('/api/invoice', invoiceRoute);
+app.use('/api/teams/:slug/invoices', invoiceRoute);
 
-app.use('/api/projects', projectRoute);
+app.use('/api/teams/:slug/projects', projectRoute);
 
-app.use('/api/tasks', taskRouter);
+app.use('/api/teams/:slug/tasks', taskRouter);
 
 app.use('/api/timer', timerRouter);
 

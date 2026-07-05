@@ -5,7 +5,7 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import { TaggingService } from "../tags/tagging.service";
 
 export const getAllProjects = asyncHandler(async (req: any, res: Response) => {
-    const allProjects = await projectService.getProjectsByOwner(req.user.id);
+    const allProjects = await projectService.getProjectsByTeam(req.teamContext.teamId, req.user.id);
     res.json({
         success: true,
         projects: allProjects,
@@ -23,7 +23,7 @@ export const getOneProject = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    if (project.ownerId !== req.user.id) {
+    if (project.teamId !== req.teamContext.teamId) {
         return res.status(StatusCodes.FORBIDDEN).json({
             success: false,
             message: "Not authorized"
@@ -38,7 +38,7 @@ export const getOneProject = asyncHandler(async (req: any, res: Response) => {
 });
 
 export const createProject = asyncHandler(async (req: any, res: Response) => {
-    const newProject = await projectService.createProject(req.user.id, req.body);
+    const newProject = await projectService.createProject(req.user.id, req.teamContext.teamId, req.body);
 
     const { tagIds } = req.body;
     if (tagIds !== undefined) {
@@ -46,7 +46,7 @@ export const createProject = asyncHandler(async (req: any, res: Response) => {
         await taggingService.replaceTags('project', newProject.id, tagIds);
     }
 
-    const finalProject = await projectService.getProjectsWithTags(newProject.id, req.user.id);
+    const finalProject = await projectService.getProjectsWithTags(newProject.id, req.teamContext.teamId, req.user.id);
 
     res.status(StatusCodes.CREATED).json({
         success: true,
@@ -65,7 +65,7 @@ export const updateProject = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    if (project.ownerId !== req.user.id) {
+    if (project.teamId !== req.teamContext.teamId) {
         return res.status(StatusCodes.FORBIDDEN).json({
             success: false,
             message: "Not authorized"
@@ -81,7 +81,7 @@ export const updateProject = asyncHandler(async (req: any, res: Response) => {
 
     await projectService.updateProject(parseInt(req.params.id), updateData);
     
-    const finalProject = await projectService.getProjectsWithTags(parseInt(req.params.id), req.user.id);
+    const finalProject = await projectService.getProjectsWithTags(parseInt(req.params.id), req.teamContext.teamId, req.user.id);
 
     res.status(StatusCodes.OK).json({
         success: true,
@@ -100,7 +100,7 @@ export const deleteProject = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    if (project.ownerId !== req.user.id) {
+    if (project.teamId !== req.teamContext.teamId) {
         return res.status(StatusCodes.FORBIDDEN).json({
             success: false,
             message: "Not authorized"
@@ -117,6 +117,6 @@ export const deleteProject = asyncHandler(async (req: any, res: Response) => {
 
 export const getTimeChart = asyncHandler(async (req: any, res: Response) => {
     const projectId = parseInt(req.params.id);
-    const chart = await projectService.getProjectTimeChart(projectId, req.user.id);
+    const chart = await projectService.getProjectTimeChart(projectId, req.teamContext.teamId);
     res.status(StatusCodes.OK).json({ success: true, chart });
 });

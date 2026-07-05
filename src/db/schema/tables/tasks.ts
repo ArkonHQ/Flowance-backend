@@ -3,6 +3,7 @@ import { priorityEnum, taskStatusEnum } from '../enums';
 import { projects } from './projects';
 import { betterAuthUser } from './auth';
 import { users } from './users';
+import { teams } from './teams';
 import { sql } from 'drizzle-orm';
 
 export const tasks = pgTable('tasks', {
@@ -22,6 +23,8 @@ export const tasks = pgTable('tasks', {
   ownerId: text('owner_id')
     .references(() => betterAuthUser.id, { onDelete: 'cascade' })
     .notNull(),
+  teamId: integer('team_id')
+    .references(() => teams.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
