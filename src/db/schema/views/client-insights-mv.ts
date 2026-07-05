@@ -7,6 +7,7 @@ export const clientInsightsMv = pgMaterializedView('client_insights_mv').as((qb)
     .select({
       id: clients.id,
       ownerId: clients.ownerId,
+      teamId: clients.teamId,
       name: clients.name,
       totalProjects: sql<number>`COUNT(DISTINCT CASE WHEN ${projects.deletedAt} IS NULL THEN ${projects.id} END)::int`.as('total_projects'),
       totalEarned: sql<number>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'paid' AND ${invoices.deletedAt} IS NULL THEN ${invoices.amount} ELSE 0 END), 0)`.as('total_earned'),
@@ -28,5 +29,5 @@ export const clientInsightsMv = pgMaterializedView('client_insights_mv').as((qb)
     .leftJoin(projects, eq(projects.clientId, clients.id))
     .leftJoin(invoices, eq(invoices.clientId, clients.id))
     .where(isNull(clients.deletedAt))
-    .groupBy(clients.id, clients.ownerId, clients.name, clients.status);
+    .groupBy(clients.id, clients.ownerId, clients.teamId, clients.name, clients.status);
 });

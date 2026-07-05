@@ -4,7 +4,7 @@ import * as tagService from "./tag.service";
 import { asyncHandler } from "../../utils/asyncHandler";
 
 export const getAllTags = asyncHandler(async (req: any, res: Response) => {
-    const tags = await tagService.getTagsByOwner(req.user.id);
+    const tags = await tagService.getTagsByTeam(req.teamContext.teamId, req.user.id);
     res.json({
         success: true,
         tags,
@@ -13,7 +13,7 @@ export const getAllTags = asyncHandler(async (req: any, res: Response) => {
 });
 
 export const createTag = asyncHandler(async (req: any, res: Response) => {
-    const tag = await tagService.createTag(req.user.id, req.body);
+    const tag = await tagService.createTag(req.user.id, req.teamContext.teamId, req.body);
     res.status(StatusCodes.CREATED).json({
         success: true,
         tag,
@@ -23,7 +23,7 @@ export const createTag = asyncHandler(async (req: any, res: Response) => {
 
 export const updateTag = asyncHandler(async (req: any, res: Response) => {
     const { id } = req.params;
-    const tag = await tagService.updateTag(Number(id), req.user.id, req.body);
+    const tag = await tagService.updateTag(Number(id), req.teamContext.teamId, req.user.id, req.body);
     res.status(StatusCodes.OK).json({
         success: true,
         tag,

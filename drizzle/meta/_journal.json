@@ -183,6 +183,13 @@
       "when": 1783290842278,
       "tag": "0025_confused_prism",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1783415484474,
+      "tag": "0026_chunky_juggernaut",
+      "breakpoints": true
     }
   ]
 }

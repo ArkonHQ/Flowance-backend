@@ -20,7 +20,7 @@ export const getProjectsByTeam = async (teamId: number, ownerId: string) => {
 
     if (projectsList.length === 0) return [];
 
-    const taggingService = new TaggingService(ownerId);
+    const taggingService = new TaggingService(ownerId, teamId);
     const tagsMap = await taggingService.getTagsForEntities(
         'project',
         projectsList.map(p => p.project.id)
@@ -109,7 +109,7 @@ export const getProjectsWithTags = async (projectId: number, teamId: number, own
             )
         )
 
-        const taggingService = new TaggingService(ownerId)
+        const taggingService = new TaggingService(ownerId, teamId)
         const tags = await taggingService.getTagsForEntity('project', projectId)
 
         return { ...project, tags }

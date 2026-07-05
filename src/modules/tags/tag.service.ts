@@ -2,14 +2,15 @@ import { and, eq } from "drizzle-orm";
 import { db } from "../../config/db";
 import { tags } from "../../db/schema/tables/tags";
 
-export const getTagsByOwner = async (ownerId: string) => {
-    return await db.select().from(tags).where(eq(tags.ownerId, ownerId));
+export const getTagsByTeam = async (teamId: number, ownerId: string) => {
+    return await db.select().from(tags).where(eq(tags.teamId, teamId));
 }
 
-export const createTag = async (ownerId: string, data: { name: string; icon?: string; color?: string }) => {
+export const createTag = async (ownerId: string, teamId: number, data: { name: string; icon?: string; color?: string }) => {
     try {
         const newTag = await db.insert(tags).values({
             ownerId,
+            teamId,
             name: data.name,
             icon: data.icon,
             color: data.color
@@ -24,7 +25,7 @@ export const createTag = async (ownerId: string, data: { name: string; icon?: st
     }
 }
 
-export const updateTag = async (tagId: number, ownerId: string, data: { name?: string; icon?: string; color?: string }) => {
+export const updateTag = async (tagId: number, teamId: number, ownerId: string, data: { name?: string; icon?: string; color?: string }) => {
     try {
         const updatedTag = await db.update(tags)
             .set({
@@ -33,7 +34,7 @@ export const updateTag = async (tagId: number, ownerId: string, data: { name?: s
                 ...(data.color && { color: data.color }),
                 updatedAt: new Date()
             })
-            .where(and(eq(tags.id, tagId), eq(tags.ownerId, ownerId)))
+            .where(and(eq(tags.id, tagId), eq(tags.teamId, teamId)))
             .returning();
         
         if (updatedTag.length === 0) {

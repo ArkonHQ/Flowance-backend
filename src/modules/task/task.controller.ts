@@ -41,7 +41,7 @@ export const createTask = asyncHandler(async (req: any, res: Response) => {
     
     const { tagIds } = req.body;
     if (tagIds !== undefined) {
-        const taggingService = new TaggingService(req.user.id);
+        const taggingService = new TaggingService(req.user.id, req.teamContext.teamId);
         await taggingService.replaceTags('task', newTask.id, tagIds);
     }
     
@@ -69,7 +69,7 @@ export const updateTask = asyncHandler(async (req: any, res: Response) => {
     const { tagIds } = req.body
 
     if (tagIds !== undefined) {
-        const taggingService = new TaggingService(ownerId)
+        const taggingService = new TaggingService(ownerId, req.teamContext.teamId)
         await taggingService.replaceTags('task', parseInt(taskId), tagIds)
     }
 
@@ -108,7 +108,7 @@ export const deleteTask = asyncHandler(async (req: any, res: Response) => {
 export const getTotalHours = asyncHandler(async (req:any, res: any) => {
 
   const ownerId = req.user.id
-  const service = new TimeEntryService(ownerId)
+  const service = new TimeEntryService(ownerId, req.teamContext.teamId)
   const totalHours = await service.getTotalHours()
 
   res.json({

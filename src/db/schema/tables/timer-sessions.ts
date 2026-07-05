@@ -1,10 +1,12 @@
 import { pgTable, integer, timestamp, text, serial } from 'drizzle-orm/pg-core';
 import { betterAuthUser } from './auth';
 import { tasks } from './tasks';
+import { teams } from './teams';
 
 export const timerSessions = pgTable('timer_sessions', {
   id: serial('id').primaryKey(),
   ownerId: text('owner_id').notNull().references(() => betterAuthUser.id, { onDelete: 'cascade' }),
+  teamId: integer('team_id').references(() => teams.id, { onDelete: 'cascade' }),
   taskId: integer('task_id').notNull().references(() => tasks.id, { onDelete: 'cascade' }),
   taskName: text('task_name').notNull(),
   startTime: timestamp('start_time').notNull(),

@@ -16,7 +16,7 @@ import { taggings } from "../../db/schema/tables/taggings"
 
 
 export class TaggingService {
-  constructor(private ownerId: string) {}
+  constructor(private ownerId: string, private teamId?: number) {}
 
   //Get all tags for an entity
   async getTagsForEntity(entityType: string, entityId: number) {
@@ -28,7 +28,7 @@ export class TaggingService {
         and(
           eq(taggings.entityType, entityType),
           eq(taggings.entityId, entityId),
-          eq(tags.ownerId, this.ownerId)
+          this.teamId ? eq(tags.teamId, this.teamId) : eq(tags.ownerId, this.ownerId)
         )
       );
     return result.map(r => r.tags);
@@ -49,7 +49,7 @@ export class TaggingService {
         and(
           eq(taggings.entityType, entityType),
           inArray(taggings.entityId, entityIds),
-          eq(tags.ownerId, this.ownerId)
+          this.teamId ? eq(tags.teamId, this.teamId) : eq(tags.ownerId, this.ownerId)
         )
       )
 
@@ -144,7 +144,7 @@ export class TaggingService {
       .where(
         and(
           eq(taggings.entityType, entityType),
-          eq(tags.ownerId, this.ownerId)
+          this.teamId ? eq(tags.teamId, this.teamId) : eq(tags.ownerId, this.ownerId)
         )
       )
       .groupBy(tags.id)

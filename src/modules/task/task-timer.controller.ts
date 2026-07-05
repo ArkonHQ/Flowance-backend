@@ -17,6 +17,7 @@ export const stopTimer = asyncHandler(async (req: any, res: any) => {
   const { taskId } = req.params;
   const { startTime, endTime, description, hours: frontendHours } = req.body;
   const ownerId = req.user.id; 
+  const teamId = req.teamContext.teamId;
   const taskIdNumber = Number(taskId);
 
   if (Number.isNaN(taskIdNumber)) {
@@ -35,12 +36,11 @@ export const stopTimer = asyncHandler(async (req: any, res: any) => {
     return res.status(StatusCodes.BAD_REQUEST).json({ success: false, message: "End time must be after start time" });
   }
 
-  // Verify task belongs to user
+  // Verify task belongs to the team
   const taskExists = await db
     .select()
     .from(tasks)
-    .innerJoin(projects, eq(tasks.projectId, projects.id))
-    .where(and(eq(tasks.id, taskIdNumber), eq(projects.ownerId, ownerId)))
+    .where(and(eq(tasks.id, taskIdNumber), eq(tasks.teamId, teamId)))
     .limit(1);
 
   if (taskExists.length === 0) {
@@ -56,6 +56,7 @@ export const stopTimer = asyncHandler(async (req: any, res: any) => {
       description: description || `Worked on task ${taskIdNumber}`,
       date: new Date(),
       ownerId,
+      teamId,
     })
     .returning();
 
@@ -66,6 +67,7 @@ export const stopTimer = asyncHandler(async (req: any, res: any) => {
 export const getTaskHours = asyncHandler(async (req: any, res: any) => {
   const { taskId } = req.params;
   const ownerId = req.user.id;
+  const teamId = req.teamContext.teamId;
   const taskIdNumber = Number(taskId);
 
   if (Number.isNaN(taskIdNumber)) {
@@ -76,8 +78,7 @@ export const getTaskHours = asyncHandler(async (req: any, res: any) => {
     .select({ total: sql<number>`COALESCE(SUM(${timeEntries.hours}), 0)` })
     .from(timeEntries)
     .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
-    .innerJoin(projects, eq(projects.id, tasks.projectId))
-    .where(and(eq(timeEntries.taskId, taskIdNumber), eq(projects.ownerId, ownerId)));
+    .where(and(eq(timeEntries.taskId, taskIdNumber), eq(tasks.teamId, teamId)));
 
   const totalHours = Number(result[0]?.total) || 0;
   res.json({ success: true, totalHours });
@@ -88,6 +89,7 @@ export const pauseTimer = asyncHandler(async (req: any, res: any) => {
   const { taskId } = req.params;
   const { startTime, totalPausedSeconds } = req.body;
   const ownerId = req.user.id;
+  const teamId = req.teamContext.teamId;
   const taskIdNumber = Number(taskId);
 
   if (Number.isNaN(taskIdNumber)) {
@@ -101,16 +103,15 @@ export const pauseTimer = asyncHandler(async (req: any, res: any) => {
 
   if (totalSeconds <= 0) {
     // Still delete session even if no hours
-    await db.delete(timerSessions).where(eq(timerSessions.ownerId, ownerId));
+    await db.delete(timerSessions).where(and(eq(timerSessions.ownerId, ownerId), eq(timerSessions.teamId, teamId)));
     return res.json({ success: true, hours: 0, message: "No time to log" });
   }
 
-  // Verify task belongs to user
+  // Verify task belongs to the team
   const taskExists = await db
     .select()
     .from(tasks)
-    .innerJoin(projects, eq(tasks.projectId, projects.id))
-    .where(and(eq(tasks.id, taskIdNumber), eq(projects.ownerId, ownerId)))
+    .where(and(eq(tasks.id, taskIdNumber), eq(tasks.teamId, teamId)))
     .limit(1);
 
   if (taskExists.length === 0) {
@@ -126,11 +127,12 @@ export const pauseTimer = asyncHandler(async (req: any, res: any) => {
       description: `Timer chunk for task ${taskIdNumber}`,
       date: now,
       ownerId,
+      teamId,
     })
     .returning();
 
   // Delete the active session
-  await db.delete(timerSessions).where(eq(timerSessions.ownerId, ownerId));
+  await db.delete(timerSessions).where(and(eq(timerSessions.ownerId, ownerId), eq(timerSessions.teamId, teamId)));
 
   res.json({ success: true, entry: newEntry, hours });
 });
@@ -141,6 +143,7 @@ export const manualTime = asyncHandler(async (req: any, res: any) => {
   const { taskId } = req.params;
   const { hours, description, date } = req.body; // date is optional, defaults to now
   const ownerId = req.user.id; // better-auth string ID
+  const teamId = req.teamContext.teamId;
   const taskIdNum = Number(taskId);
 
   if (isNaN(taskIdNum)) {
@@ -158,12 +161,11 @@ export const manualTime = asyncHandler(async (req: any, res: any) => {
     });
   }
 
-  // Verify the task belongs to the user
+  // Verify the task belongs to the team
   const taskExists = await db
     .select()
     .from(tasks)
-    .innerJoin(projects, eq(tasks.projectId, projects.id))
-    .where(and(eq(tasks.id, taskIdNum), eq(projects.ownerId, ownerId)))
+    .where(and(eq(tasks.id, taskIdNum), eq(tasks.teamId, teamId)))
     .limit(1);
 
   if (taskExists.length === 0) {
@@ -185,6 +187,7 @@ export const manualTime = asyncHandler(async (req: any, res: any) => {
       description: description || `Manual time entry for task ${taskIdNum}`,
       date: entryDate,
       ownerId,
+      teamId,
     })
     .returning();
 

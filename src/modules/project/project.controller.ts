@@ -42,7 +42,7 @@ export const createProject = asyncHandler(async (req: any, res: Response) => {
 
     const { tagIds } = req.body;
     if (tagIds !== undefined) {
-        const taggingService = new TaggingService(req.user.id);
+        const taggingService = new TaggingService(req.user.id, req.teamContext.teamId);
         await taggingService.replaceTags('project', newProject.id, tagIds);
     }
 
@@ -75,7 +75,7 @@ export const updateProject = asyncHandler(async (req: any, res: Response) => {
     const { tagIds, ...updateData } = req.body;
 
     if (tagIds !== undefined) {
-        const taggingService = new TaggingService(req.user.id);
+        const taggingService = new TaggingService(req.user.id, req.teamContext.teamId);
         await taggingService.replaceTags('project', parseInt(req.params.id), tagIds);
     }
 

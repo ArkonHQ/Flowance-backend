@@ -2,6 +2,7 @@ import { pgTable, serial, numeric, text, timestamp, integer, index } from "drizz
 import { tasks } from "./tasks";
 import { betterAuthUser } from "./auth";
 import { users } from "./users";
+import { teams } from "./teams";
 
 export const timeEntries = pgTable('time_entries', {
   id: serial('id').primaryKey(),
@@ -19,6 +20,8 @@ export const timeEntries = pgTable('time_entries', {
   ownerId: text('owner_id')
     .references(() => betterAuthUser.id, { onDelete: 'cascade' })
     .notNull(),
+  teamId: integer('team_id')
+    .references(() => teams.id, { onDelete: 'cascade' }),
 }, (table) => ({
  taskDateIdx: index('idx_time_entries_task_date')
  .on(table.taskId, table.date),

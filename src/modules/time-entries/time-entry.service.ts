@@ -4,11 +4,13 @@ import { projects, tasks } from "../../db/schema";
 import { timeEntries } from "../../db/schema/tables/time-entries";
 
 export class TimeEntryService {
-    constructor(private ownerId: string) {}
+    constructor(private ownerId: string, private teamId?: number) {}
 
     // Get total hours for all tasks (or optionally filtered by taskId)
     getTotalHours = async (taskId?: number): Promise<number> => {
-      let condition = and (eq(projects.ownerId, this.ownerId))
+      let condition = this.teamId
+        ? and(eq(tasks.teamId, this.teamId))
+        : and(eq(projects.ownerId, this.ownerId))
       if (taskId) {
         condition = and(condition, eq(tasks.id, taskId))
       }

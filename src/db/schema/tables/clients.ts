@@ -1,6 +1,7 @@
 import { pgTable, serial, text, timestamp, varchar, decimal, integer } from 'drizzle-orm/pg-core';
 import { betterAuthUser } from './auth';
 import { clientStatusEnum } from '../enums';
+import { teams } from './teams';
 
 export const clients = pgTable('clients', {
   id: serial('id').primaryKey(),
@@ -11,6 +12,8 @@ export const clients = pgTable('clients', {
     .references(() => betterAuthUser.id, { onDelete: 'cascade' })
     .notNull(),
   status: clientStatusEnum('status').default('active').notNull(),
+  teamId: integer('team_id')
+    .references(() => teams.id, { onDelete: 'cascade' }),
   totalProjects: integer('total_projects').default(0).notNull(),
   totalRevenue: decimal('total_revenue', { precision: 10, scale: 2 }).default('0.00').notNull(),
   lastActivity: timestamp('last_activity'),

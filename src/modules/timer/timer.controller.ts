@@ -18,17 +18,19 @@ import { asyncHandler } from "../../utils/asyncHandler";
 // Save or update active timer session (called when timer starts)
 export const saveTimerSession = asyncHandler(async (req: any, res: any) => {
   const ownerId = req.user.id
+  const teamId = req.teamContext.teamId
   const {taskId, taskName, startTime, status, totalPausedSeconds} = req.body
 
-  // Update: delete existing session for this user, then inset new one
+  // Update: delete existing session for this user+team, then insert new one
   await db
     .delete(timerSessions)
-    .where(eq(timerSessions.ownerId, ownerId))
+    .where(and(eq(timerSessions.ownerId, ownerId), eq(timerSessions.teamId, teamId)))
 
   const [session] = await db
     .insert(timerSessions)
     .values({
       ownerId,
+      teamId,
       taskId,
       taskName,
       startTime: new Date(startTime),
@@ -44,13 +46,14 @@ export const saveTimerSession = asyncHandler(async (req: any, res: any) => {
 })
 
 
-// Get active timer session for current user
+// Get active timer session for current user and team
 export const getActiveTimerSession = asyncHandler(async(req: any, res: any) => {
   const ownerId = req.user.id
+  const teamId = req.teamContext.teamId
   const session = await db
     .select()
     .from(timerSessions)
-    .where(eq(timerSessions.ownerId, ownerId))
+    .where(and(eq(timerSessions.ownerId, ownerId), eq(timerSessions.teamId, teamId)))
     .limit(1)
 
     if (session.length === 0) {
@@ -70,9 +73,10 @@ export const getActiveTimerSession = asyncHandler(async(req: any, res: any) => {
 // Delete timer session (when timer is stopped)
 export const deleteTimerSession = asyncHandler(async (req: any, res: any) => {
   const ownerId = req.user.id
+  const teamId = req.teamContext.teamId
   await db 
     .delete(timerSessions)  
-    .where(eq(timerSessions.ownerId, ownerId))
+    .where(and(eq(timerSessions.ownerId, ownerId), eq(timerSessions.teamId, teamId)))
     
 
   res.json({

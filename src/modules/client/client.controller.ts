@@ -6,7 +6,7 @@ import { createClientSchema, updateClientSchema } from "./client.schema";
 
 
 export const getClients = asyncHandler(async (req: any, res: Response) => {
-    const allClients = await clientService.getActiveClients(req.user.id);
+    const allClients = await clientService.getActiveClients(req.teamContext.teamId, req.user.id);
     res.status(StatusCodes.OK).json({
         success: true,
         clients: allClients,
@@ -15,7 +15,7 @@ export const getClients = asyncHandler(async (req: any, res: Response) => {
 });
 
 export const getClient = asyncHandler(async (req: any, res: Response) => {
-    const client = await clientService.getActiveClientById(parseInt(req.params.id), req.user.id);
+    const client = await clientService.getActiveClientById(parseInt(req.params.id), req.teamContext.teamId, req.user.id);
 
     if (!client) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -24,7 +24,7 @@ export const getClient = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    if (client.ownerId !== req.user.id) {
+    if (client.teamId !== req.teamContext.teamId) {
         return res.status(StatusCodes.FORBIDDEN).json({
             success: false,
             message: 'Not authorized',
@@ -40,9 +40,10 @@ export const getClient = asyncHandler(async (req: any, res: Response) => {
 
 export const getClientInsight = asyncHandler(async(req: any, res: Response) => {
     const clientId = parseInt(req.params.id);
+    const teamId = req.teamContext.teamId;
     const ownerId = req.user.id;
     
-    const insight = await clientService.getClientInsight(clientId, ownerId);
+    const insight = await clientService.getClientInsight(clientId, teamId, ownerId);
 
     if (!insight) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -66,6 +67,7 @@ export const createClient = asyncHandler(async (req: any, res: Response) => {
     const newClient = await clientService.createClient({
         ...validatedData,
         ownerId: req.user.id,
+        teamId: req.teamContext.teamId,
     });
 
     res.status(StatusCodes.CREATED).json({
@@ -77,7 +79,7 @@ export const createClient = asyncHandler(async (req: any, res: Response) => {
 
 
 export const deleteClient = asyncHandler(async (req: any, res: Response) => {
-    const client = await clientService.getActiveClientById(parseInt(req.params.id), req.user.id);
+    const client = await clientService.getActiveClientById(parseInt(req.params.id), req.teamContext.teamId, req.user.id);
 
     if (!client) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -86,14 +88,14 @@ export const deleteClient = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    if (client.ownerId !== req.user.id) {
+    if (client.teamId !== req.teamContext.teamId) {
         return res.status(StatusCodes.FORBIDDEN).json({
             success: false,
             message: `Not authorized`,
         });
     }
 
-    const deleted = await clientService.deleteClient(parseInt(req.params.id), req.user.id);
+    const deleted = await clientService.deleteClient(parseInt(req.params.id), req.teamContext.teamId, req.user.id);
     res.json({
         success: true,
         message: `Client deleted successfully`,
@@ -102,7 +104,7 @@ export const deleteClient = asyncHandler(async (req: any, res: Response) => {
 });
 
 export const updateClient = asyncHandler(async (req: any, res: Response) => {
-    const client = await clientService.getActiveClientById(parseInt(req.params.id), req.user.id);
+    const client = await clientService.getActiveClientById(parseInt(req.params.id), req.teamContext.teamId, req.user.id);
 
     if (!client) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -111,7 +113,7 @@ export const updateClient = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    if (client.ownerId !== req.user.id) {
+    if (client.teamId !== req.teamContext.teamId) {
         return res.status(StatusCodes.FORBIDDEN).json({
             success: false,
             message: 'Not authorized',
@@ -119,7 +121,7 @@ export const updateClient = asyncHandler(async (req: any, res: Response) => {
     }
 
     const validatedData = updateClientSchema.parse(req.body);
-    const updated = await clientService.updateClient(parseInt(req.params.id), req.user.id, validatedData);
+    const updated = await clientService.updateClient(parseInt(req.params.id), req.teamContext.teamId, req.user.id, validatedData);
     res.status(StatusCodes.OK).json({
         success: true,
         client: updated,
@@ -131,8 +133,9 @@ export const restoreClient = async(req: any, res: Response) => {
 
     try {
     const ownerId = req.user.id;
+    const teamId = req.teamContext.teamId;
     const clientId = parseInt(req.params.id);
-    await clientService.restoreClient(clientId, ownerId);
+    await clientService.restoreClient(clientId, teamId, ownerId);
     res.status(StatusCodes.OK).json({ success: true, message: 'Client restored' })
     }catch (err: any) {
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({

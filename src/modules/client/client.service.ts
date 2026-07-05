@@ -9,13 +9,13 @@ import { StatusCodes } from 'http-status-codes';
 
 export const clientService = {
 
-    // Get all active clients for a specific user
-    async getActiveClients(ownerId: string) {
+    // Get all active clients for a specific user and team
+    async getActiveClients(teamId: number, ownerId: string) {
         return await db
             .select()
             .from(clients)
             .where(and(
-                eq(clients.ownerId, ownerId),
+                eq(clients.teamId, teamId),
                 isNull(clients.deletedAt)
             )
         )
@@ -23,36 +23,36 @@ export const clientService = {
     },
 
     // Get a single active client with details and statistics by ID
-    async getActiveClientById(clientId: number, ownerId: string) {
+    async getActiveClientById(clientId: number, teamId: number, ownerId: string) {
       const [client] = await db
         .select()
         .from(clients)
         .where(
             and(eq(clients.id, clientId),
-            eq(clients.ownerId, ownerId),
+            eq(clients.teamId, teamId),
             isNull(clients.deletedAt)
             )
         )
     return client;
     },
 
-    // Get client insights by ID or all active client insights for the owner
-    async getClientInsight(clientId: number | undefined, ownerId: string) {
+    // Get client insights by ID or all active client insights for the team
+    async getClientInsight(clientId: number | undefined, teamId: number, ownerId: string) {
         if (clientId === undefined || isNaN(clientId)) {
-            // Get all insights for this owner
+            // Get all insights for this team
             return await db
                 .select()
                 .from(clientInsightsMv)
-                .where(eq(clientInsightsMv.ownerId, ownerId));
+                .where(eq(clientInsightsMv.teamId, teamId));
         }
 
-        // Get single insight secure by ownerId
+        // Get single insight secure by teamId
         const insight = await db
             .select()
             .from(clientInsightsMv)
             .where(and(
                 eq(clientInsightsMv.id, clientId),
-                eq(clientInsightsMv.ownerId, ownerId)
+                eq(clientInsightsMv.teamId, teamId)
             ))
             .then(rows => rows[0]);
         
@@ -60,7 +60,7 @@ export const clientService = {
     },
 
     // Create a new client
-    async createClient(data: {name: string; email?: string; company?: string; ownerId: string;  }) {
+    async createClient(data: {name: string; email?: string; company?: string; ownerId: string; teamId: number; }) {
         const [newClient] = await db
             .insert(clients)
             .values({
@@ -68,6 +68,7 @@ export const clientService = {
                 email: data.email || null,
                 company: data.company || null,
                 ownerId: data.ownerId,
+                teamId: data.teamId,
             })
             .returning();
         
@@ -75,14 +76,14 @@ export const clientService = {
     },
 
     // Update an existing client
-    async updateClient(clientId: number, ownerId: string, data: Partial<{name: string; email?: string; company?: string;   }>) {
+    async updateClient(clientId: number, teamId: number, ownerId: string, data: Partial<{name: string; email?: string; company?: string;   }>) {
         const [updated] = await db
             .update(clients)
             .set({ ...data, updatedAt: new Date() })
             .where(
                 and(
                     eq(clients.id, clientId),
-                    eq(clients.ownerId, ownerId),
+                    eq(clients.teamId, teamId),
                     isNull(clients.deletedAt)
                 )
             )
@@ -91,10 +92,10 @@ export const clientService = {
     },
 
     // soft delete a client (cascade to projects/invoices)
-    async deleteClient(clientId: number, ownerId: string) {
+    async deleteClient(clientId: number, teamId: number, ownerId: string) {
         
-        // Verify if client belongs to the owner
-        const client = await this.getActiveClientById(clientId, ownerId)
+        // Verify if client belongs to the team
+        const client = await this.getActiveClientById(clientId, teamId, ownerId)
         if(!client) throw new Error('Client not found or already deleted')
 
         await softDeleteClient(clientId, true)
@@ -103,7 +104,7 @@ export const clientService = {
     },
 
     // Restore client (cascade restore projects/invoices)
-    async restoreClient(clientId: number, ownerId: string) {
+    async restoreClient(clientId: number, teamId: number, ownerId: string) {
 
         const [client] = await db
             .select()
@@ -111,7 +112,7 @@ export const clientService = {
             .where(
                 and(
                     eq(clients.id, clientId),
-                    eq(clients.ownerId, ownerId),
+                    eq(clients.teamId, teamId),
                     sql`${clients.deletedAt} IS NOT NULL`
                 )
             )
