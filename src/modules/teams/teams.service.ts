@@ -1,53 +1,66 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "../../config/db";
 import { teamMembers, teams } from "../../db/schema/tables/teams";
-import { user, users } from "../../db/schema";
-import { set, slugify } from "zod";
+import { users } from "../../db/schema/tables/users";
+import { TeamContext } from "../../types/context.type";
 
 
 
 
 export class TeamService {
-  constructor (private userId: number) {}
 
+  static async createTeam(userId: number, data: { name: string; description?: string; logo?: string }) {
+    let baseSlug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') // Making slug from team name
+    if (!baseSlug) baseSlug = 'team' // If slug is empty, set it to 'team'
+    const slug = `${baseSlug}-${Date.now()}` // Add timestamp to slug to make it unique
 
-  async getTeamWithMembers(slug: string) {
-    // 1. fetch team
+    const [team] = await db
+      .insert(teams)
+      .values({
+        name: data.name,
+        slug,
+        description: data.description,
+        logo: data.logo,
+        createdBy: userId,
+        ownerId: userId,
+      })
+      .returning()
+
+    await db
+      .insert(teamMembers)
+      .values({
+        teamId: team.id,
+        userId: userId,
+        role: 'admin',
+        status: 'active',
+        joinedAt: new Date(),
+        createdBy: userId,
+      })
+
+    return team
+  }
+
+  // Get team with its members
+  static async getTeamWithMembers(ctx: TeamContext) {
+    const { teamId, userId, role, isOwner } = ctx
+
     const team = await db
       .select()
       .from(teams)
-      .where(eq(teams.slug, slug))
+      .where(eq(teams.id, teamId))
 
-    if (!team) throw new Error ('Team not found')
-      
-    // 2. Check membership of requester
-    const membership = await db
-      .select()
-      .from(teamMembers)
-      .where(
-        and (
-          eq (teamMembers.teamId, team[0].id),
-          eq (teamMembers.userId, this.userId),
-          eq (teamMembers.status, 'active')
-        )
-      )
+    if (!team.length) throw new Error('Team not found')
 
-      if (!membership) throw new Error('You are not a member of this team')
+    const isAdminOrOwner = isOwner || role === 'admin'
 
-      
-      // 3. Determine effective role
-      const effectiveRole = team[0].ownerId === this.userId ? 'owner' : membership[0].role
-      const isAdminOrOwner = effectiveRole === 'owner' || effectiveRole === 'admin'
+    // Fetch members   admins/owners see all statuses, regular members only see active
+    const conditions = [eq(teamMembers.teamId, teamId)]
+    if (!isAdminOrOwner) {
+      conditions.push(eq(teamMembers.status, 'active'))
+    }
 
-      // 4. Fetch members based on role
-      const conditions = [eq(teamMembers.teamId, team[0].id)];
-      if (!isAdminOrOwner) {
-        // Regular members only see active members
-        conditions.push(eq(teamMembers.status, "active"));
-      }
-
-      let membersQuery = db 
-        .select({
+    const members = await db
+      .select({
         membershipId: teamMembers.id,
         userId: teamMembers.userId,
         role: teamMembers.role,
@@ -58,14 +71,12 @@ export class TeamService {
         invitedBy: teamMembers.invitedBy,
         userName: users.name,
         userAvatar: users.image,
-        })
-        .from(teamMembers)
-        .innerJoin(users, eq(users.id, teamMembers.userId))
-        .where(and(...conditions));
+      })
+      .from(teamMembers)
+      .innerJoin(users, eq(users.id, teamMembers.userId))
+      .where(and(...conditions))
 
-    const members = await membersQuery
-
-    return ({
+    return {
       team: {
         id: team[0].id,
         name: team[0].name,
@@ -74,316 +85,217 @@ export class TeamService {
         logo: team[0].logo,
         ownerId: team[0].ownerId,
         createdAt: team[0].createdAt,
-        updatedAt: team[0].updatedAt
+        updatedAt: team[0].updatedAt,
       },
       members,
-      myRole: effectiveRole
-    })
+      myRole: isOwner ? 'owner' : role,
+    }
   }
 
 
-  async updateTeam(slug: string, data: {name?: string, description?: string, logo?: string}) {
-    // Fetch team check membership & role 
-    const team = await db
-      .select()
-      .from(teams)
-      .where(eq (teams.slug, slug))
-    
-    if (!team) throw new Error('Team not found')
+  // Update team info (admin/owner only enforced by middleware)
+  static async updateTeam(ctx: TeamContext, data: { name?: string; description?: string; logo?: string }) {
+    const { teamId, userId } = ctx
 
-    const membership = await db
-      .select()
-      .from(teamMembers)
-      .where(
-        and(
-          eq(teamMembers.teamId, team[0].id),
-          eq(teamMembers.userId, this.userId),
-          eq(teamMembers.status, 'active')
-        )
-      )
+    const updateData: any = { updatedAt: new Date(), updatedBy: userId }
+    if (data.name !== undefined) updateData.name = data.name
+    if (data.description !== undefined) updateData.description = data.description
+    if (data.logo !== undefined) updateData.logo = data.logo
 
-      if (!membership) throw new Error('You are not a member of this team')
-      
-      const effectiveRole = team[0].ownerId === this.userId ? 'owner' : membership[0].role
-      if (effectiveRole !== 'owner' && effectiveRole !== 'admin') throw new Error ('You do not have permission. Only admins can update the team')
+    const [updated] = await db
+      .update(teams)
+      .set(updateData)
+      .where(eq(teams.id, teamId))
+      .returning()
 
-      
-      // Prepare update 
-      const updateData: any = {updatedAt: new Date(), updateBy: this.userId}
-      if (data.name !== undefined){
-        updateData.name = data.name
-        // IF WE WANT TO REGENRATE THE SLUG ACCORDING TO THE NAME 
-      }
-
-      if (data.description !== undefined) updateData.description = data.description
-      if (data.logo !== undefined) updateData.logo = data.logo
-
-      const [updateTeam] = await db
-        .update(teams)
-        .set(updateData)
-        .where(eq(teams.id, team[0].id))
-        .returning()
-
-    
-      return updateTeam
+    return updated
   }
 
-  async deleteTeam (slug: string) {
-    const team = await db
-      .select()
-      .from(teams)
-      .where(eq(teams.slug, slug))
 
-    if (!team) throw new Error ('Team not found')
+  // Soft-delete the team (owner only enforced by middleware)
+  static async deleteTeam(ctx: TeamContext) {
+    const { teamId, userId, isOwner } = ctx
 
-    if (team[0].ownerId !== this.userId) throw new Error ('You do not own this team. Only owner can delete the team')
+    if (!isOwner) throw new Error('You do not own this team. Only the owner can delete the team')
 
-
-    // Soft delete to keep analytics alive even if the team was deleted
     await db
       .update(teams)
-      .set({deletedAt: new Date(), deletedBy: this.userId, updatedAt: new Date()})
+      .set({ deletedAt: new Date(), deletedBy: userId, updatedAt: new Date() })
+      .where(eq(teams.id, teamId))
 
-    return {message: 'Team deleted successfully'}
+    return { message: 'Team deleted successfully' }
   }
 
 
+  // Remove a member from the team (admin OR owner only enforced by middleware)
+  static async removeMember(ctx: TeamContext, memberUserId: number) {
+    const { teamId, userId, role, isOwner } = ctx
 
-  async removeMember (teamSlug: string, memberUserId: number) {
-    // Fetch team and check authorization
-    const team = await db
-      .select()
-      .from(teams)
-      .where(eq (teams.slug, teamSlug))
+    // Fetch the team to check ownerId
+    const team = await db.select().from(teams).where(eq(teams.id, teamId))
+    if (!team.length) throw new Error('Team not found')
 
-    const membership = await db
-      .select()
-      .from(teamMembers)
-      .where(
-        and(
-          eq(teamMembers.teamId, team[0].id),
-          eq (teamMembers.userId, this.userId),
-          eq(teamMembers.status, 'active')
-        )
-      )
-
-    if (!membership) throw new Error ('You are not an active member') 
-
-    const effectiveRole = team[0].ownerId === this.userId ? 'owner' : membership[0].role
-    if (effectiveRole !== 'owner' && effectiveRole !== 'admin') throw new Error ('You do not have permission. Only admins can remove members')
-
-    
     // Prevent removing the owner
-    if (memberUserId === team[0].ownerId) throw new Error ('You cannot remove the owner')
+    if (memberUserId === team[0].ownerId) throw new Error('You cannot remove the owner')
 
-
-    // Find target membership 
+    // Find target membership
     const target = await db
       .select()
       .from(teamMembers)
       .where(
         and(
-          eq(teamMembers.teamId, team[0].id),
+          eq(teamMembers.teamId, teamId),
           eq(teamMembers.userId, memberUserId)
         )
       )
 
-    if (!target || target[0].status !== 'active') throw new Error ('Memeber not found or not active')
+    if (!target.length || target[0].status !== 'active') throw new Error('Member not found or not active')
 
-    // Admin can't remove another admin
-    const targetRole = target[0].role
-    if (targetRole === 'admin') throw new Error ('You cannot remove another admin')
+    // Admin cannot remove another admin
+    if (target[0].role === 'admin' && !isOwner) throw new Error('You cannot remove another admin')
 
-    // Soft-delete: set status = 'left' leftAt
+    // Soft-delete
     await db
       .update(teamMembers)
       .set({
         status: 'left',
         leftAt: new Date(),
         updatedAt: new Date(),
-        updatedBy: this.userId
+        updatedBy: userId,
       })
       .where(eq(teamMembers.id, target[0].id))
 
-
-
-    return {message: 'Member removed successfully'}
+    return { message: 'Member removed successfully' }
   }
 
 
-  async changeMemberRole (teamSlug: string, memberUserId: number, newRole: 'admin' | 'member') {
-    const team = await db
-      .select()
-      .from(teams)
-      .where(eq(teams.slug, teamSlug))
+  // Change a member's role (admin/owner only enforced by middleware)
+  static async changeMemberRole(ctx: TeamContext, memberUserId: number, newRole: 'admin' | 'member') {
+    const { teamId, userId, isOwner } = ctx
 
-    if (!team) throw new Error ('Team not found')
+    if (memberUserId === userId) throw new Error('You cannot change your own role')
 
-    
-    const membership = await db
+    const team = await db.select().from(teams).where(eq(teams.id, teamId))
+    if (!team.length) throw new Error('Team not found')
+
+    if (memberUserId === team[0].ownerId) throw new Error('You cannot change the owner role')
+
+    const target = await db
       .select()
       .from(teamMembers)
       .where(
         and(
-          eq(teamMembers.teamId, team[0].id),
-          eq(teamMembers.userId, this.userId),
-          eq(teamMembers.status, 'active')
+          eq(teamMembers.teamId, teamId),
+          eq(teamMembers.userId, memberUserId)
         )
       )
 
-      if (!membership) throw new Error ('You are not an active member')
+    if (!target.length || target[0].status !== 'active') throw new Error('Member not found or not active')
 
-      const effecitveRole = team[0].ownerId === this.userId ? 'owner' : membership[0].role
-      if (effecitveRole !== 'owner' && effecitveRole !== 'admin') throw new Error ('You do not have permission. Only admins can change member roles')
+    // Only owner can promote/demote admins
+    if (target[0].role === 'admin' && !isOwner) throw new Error('You cannot change another admin\'s role')
 
-      if (memberUserId === this.userId) throw new Error ('You cannot change your own role')
-      
-      if (memberUserId === team[0].ownerId) throw new Error ('You cannot change the owner role')
+    const [updated] = await db
+      .update(teamMembers)
+      .set({
+        role: newRole,
+        updatedAt: new Date(),
+        updatedBy: userId,
+      })
+      .where(eq(teamMembers.id, target[0].id))
+      .returning()
 
-      
-      const target = await db 
-        .select()
-        .from(teamMembers)
-        .where(
-          and(
-            eq(teamMembers.teamId, team[0].id),
-            eq(teamMembers.userId, memberUserId)
-          )
-        )
-
-        if (!target || target[0].status !== 'active') throw new Error ('Member not found or not active')
-
-        if (target[0].role === 'admin') throw new Error ('You cannot change another admin role')
-
-        if (newRole !== 'admin' && newRole !== 'member') throw new Error('Invalid role')
-
-        
-        const [updated] = await db
-          .update(teamMembers)
-          .set({
-            role: newRole,
-            updatedAt: new Date(),
-            updatedBy: this.userId,
-          })
-          .where(eq(teamMembers.id, target[0].id))
-          .returning()
-
-        return {updated, message: 'Member role changed successfully'}
-    
+    return { updated, message: 'Member role changed successfully' }
   }
 
 
-  // Leave Team -----------
-  async leaveTeam (teamSlug: string) {
-    const team = await db 
-      .select()
-      .from(teams)
-      .where(eq (teams.slug, teamSlug))
+  // Leave the team (cannot leave if you are the owner)
+  static async leaveTeam(ctx: TeamContext) {
+    const { teamId, membershipId, userId, isOwner } = ctx
 
-    if (!team) throw new Error ('Team not found')
+    if (isOwner) throw new Error('You cannot leave the team as you are the owner. Transfer ownership before leaving.')
 
-    const membership = await db
+    await db
+      .update(teamMembers)
+      .set({
+        status: 'left',
+        leftAt: new Date(),
+        updatedAt: new Date(),
+        updatedBy: userId,
+      })
+      .where(eq(teamMembers.id, membershipId))
+
+    return { message: 'You have left the team' }
+  }
+
+
+  // Get all teams the user is an active member of
+  static async getUserTeams(userId: number) {
+    const memberships = await db
       .select()
       .from(teamMembers)
       .where(
         and(
-          eq(teamMembers.teamId, team[0].id),
-          eq(teamMembers.userId, this.userId),
+          eq(teamMembers.userId, userId),
           eq(teamMembers.status, 'active')
         )
       )
 
-      if (!membership) throw new Error ('You are not a member')
-      
-      if (team[0].ownerId === this.userId) throw new Error ('You cannot leave the team as you are the owner. Transfer ownership before leaving.')
-      
-      
-      await db
-        .update(teamMembers)
-        .set({
-          status: 'left',
-          leftAt: new Date(),
-          updatedAt: new Date(),
-          updatedBy: this.userId
-        })
-        .where (eq(teamMembers.id, membership[0].id))
-
-
-        return { message: 'You have left the team' }      
-  }
-
-  // List User's Team
-  async getUserTeams () {
-    const membership = await db
-      .select()
-      .from(teamMembers)
-      .where(
-        and(
-          eq(teamMembers.id, this.userId),
-          eq(teamMembers.status, 'active')
-        )
-      )
-
-
-    const teamIds = membership.map(m => m.teamId)
-    if (teamIds.length === 0 ) return []
+    const teamIds = memberships.map(m => m.teamId)
+    if (teamIds.length === 0) return []
 
     const teamsData = await db
       .select()
       .from(teams)
       .where(and(inArray(teams.id, teamIds), isNull(teams.deletedAt)))
-      
+
 
     return teamsData
   }
 
 
-  // Transfer Ownership
-  async transferOwnership (teamSlug: string, newOwnerId: number) {
-    const team = await db
-      .select()
-      .from(teams)
-      .where(eq(teams.slug, teamSlug))
+  // Transfer ownership to another active member (owner only)
+  static async transferOwnership(ctx: TeamContext, newOwnerId: number) {
+    const { teamId, userId, isOwner } = ctx
 
-    if (!team) throw new Error ('Team not found')
+    if (!isOwner) throw new Error('You do not own this team. Only the owner can transfer ownership')
 
-    if (team[0].ownerId !== this.userId) throw new Error ('You do not own this team. Only owner can transfer ownership')
-
-    if (newOwnerId === this.userId) throw new Error ('You cannot transfer ownership to yourself')
+    if (newOwnerId === userId) throw new Error('You cannot transfer ownership to yourself')
 
     const membership = await db
       .select()
       .from(teamMembers)
       .where(
         and(
-          eq(teamMembers.teamId, team[0].id),
+          eq(teamMembers.teamId, teamId),
           eq(teamMembers.userId, newOwnerId),
           eq(teamMembers.status, 'active')
         )
       )
 
-      if (!membership) throw new Error ('New owner must be an active member')
+    if (!membership.length) throw new Error('New owner must be an active member')
 
     await db
       .update(teams)
       .set({
         ownerId: newOwnerId,
         updatedAt: new Date(),
-        updatedBy: this.userId
+        updatedBy: userId,
       })
-      .where(eq(teams.id, team[0].id))
+      .where(eq(teams.id, teamId))
 
-      if (membership[0].role !== 'admin') {
-        await db
-          .update(teamMembers)
-          .set({
-            role: 'admin',
-            updatedAt: new Date(),
-            updatedBy: this.userId
-          })
-          .where(eq(teamMembers.id, membership[0].id))
-      }
+    // Promote new owner to admin if they aren't already
+    if (membership[0].role !== 'admin') {
+      await db
+        .update(teamMembers)
+        .set({
+          role: 'admin',
+          updatedAt: new Date(),
+          updatedBy: userId,
+        })
+        .where(eq(teamMembers.id, membership[0].id))
+    }
 
-      return {message: 'Ownership transferred successfully'}
+    return { message: 'Ownership transferred successfully' }
   }
 }

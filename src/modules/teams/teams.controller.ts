@@ -4,18 +4,35 @@ import { TeamService } from "./teams.service";
 
 
 
+export const createTeam = asyncHandler (async (req: any, res: any) => {
+  try {
+    const userId = req.user?.id
+    const { name, description, logo } = req.body
+
+    if (!name) return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Team name is required' })
+
+    const team = await TeamService.createTeam(userId, { name, description, logo })
+
+    return res.status(StatusCodes.CREATED).json({
+      success: true,
+      message: 'Team created successfully',
+      data: team
+    })
+
+  } catch (err: any) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: err.message || 'Failed to create team'
+    })
+  }
+})
+
 export const getTeam = asyncHandler (async (req: any, res: any) => {
 
   try {
-    
-    const userId = req.user.id;
-    const { slug } = req.params
+    const ctx = req.teamCtx
 
-    if (!slug) throw new Error ('Please provide team slug')
-
-    const teamService = new TeamService(userId)
-
-    const result = await teamService.getTeamWithMembers(slug)
+    const result = await TeamService.getTeamWithMembers(ctx)
 
     return res.status(StatusCodes.OK).json({
       success: true,
@@ -23,27 +40,28 @@ export const getTeam = asyncHandler (async (req: any, res: any) => {
       data: result
     })
 
-  } catch (err:any) {
+  } catch (err: any) {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: err.message || 'Failed to fetch team'
     })
-  } 
+  }
       
 })
 
 export const updateTeam = asyncHandler (async (req: any, res: any) => {
   
   try {
-  
-    const userId = req.user.id
-    const { slug } = req.params
-    
-    const {name, description, logo} = req.body
-    const service = new TeamService(userId)
-    const updated = await service.updateTeam(slug, {name, description, logo})
-    
-    res.json(updated, {message: 'Team updated successfully!'})
+    const ctx = req.teamCtx
+    const { name, description, logo } = req.body
+
+    const updated = await TeamService.updateTeam(ctx, { name, description, logo })
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Team updated successfully',
+      data: updated
+    })
 
   } catch (err: any) {
     res.status(StatusCodes.BAD_REQUEST).json({
@@ -56,12 +74,10 @@ export const updateTeam = asyncHandler (async (req: any, res: any) => {
 
 export const deleteTeam = asyncHandler (async (req: any, res: any) => {
   try {
+    const ctx = req.teamCtx
 
-    const userId = req.user.id;
-    const { slug } = req.params
-    const service = new TeamService(userId)
+    const result = await TeamService.deleteTeam(ctx)
 
-    const result = await service.deleteTeam(slug)
     return res.status(StatusCodes.OK).json({
       success: true,
       message: 'Team deleted successfully',
@@ -78,10 +94,11 @@ export const deleteTeam = asyncHandler (async (req: any, res: any) => {
 
 export const removeMember = asyncHandler (async (req: any, res: any) => {
   try {
-    const userId = req.user.id
-    const { slug, memberId } = req.params
-    const service = new TeamService(userId)
-    const result = await service.removeMember(slug, Number(memberId))
+    const ctx = req.teamCtx
+    const { memberId } = req.params
+
+    const result = await TeamService.removeMember(ctx, Number(memberId))
+
     return res.status(StatusCodes.OK).json({
       success: true,
       message: 'Member removed successfully',
@@ -95,13 +112,37 @@ export const removeMember = asyncHandler (async (req: any, res: any) => {
   }
 })
 
+export const changeMemberRole = asyncHandler (async (req: any, res: any) => {
+  try {
+    const ctx = req.teamCtx
+    const { memberId } = req.params
+    const { role } = req.body
+
+    if (!role || (role !== 'admin' && role !== 'member')) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Invalid role' })
+    }
+
+    const result = await TeamService.changeMemberRole(ctx, Number(memberId), role)
+
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      message: 'Member role changed successfully',
+      data: result
+    })
+  } catch (err: any) {
+    res.status(StatusCodes.BAD_REQUEST).json({
+      success: false,
+      message: err.message || 'Failed to change member role'
+    })
+  }
+})
 
 export const leaveTeam = asyncHandler (async (req: any, res: any) => {
   try {
-    const userId = req.user.id;
-    const { slug } = req.params
-    const service = new TeamService(userId)
-    const result = await service.leaveTeam(slug)
+    const ctx = req.teamCtx
+
+    const result = await TeamService.leaveTeam(ctx)
+
     return res.status(StatusCodes.OK).json({
       success: true,
       message: 'You have left the team successfully',
@@ -118,9 +159,10 @@ export const leaveTeam = asyncHandler (async (req: any, res: any) => {
 
 export const getUserTeams = asyncHandler (async (req: any, res: any) => {
   try {
-    const userId = req.user.id;
-    const service = new TeamService(userId)
-    const result = await service.getUserTeams()
+    const userId = req.user.id
+
+    const result = await TeamService.getUserTeams(userId)
+
     return res.status(StatusCodes.OK).json({
       success: true,
       message: 'User teams fetched successfully',
@@ -137,11 +179,11 @@ export const getUserTeams = asyncHandler (async (req: any, res: any) => {
 
 export const transferOwnership = asyncHandler (async (req: any, res: any) => {
   try {
-    const userId = req.user.id;
-    const { slug } = req.params
+    const ctx = req.teamCtx
     const { newOwnerId } = req.body
-    const service = new TeamService(userId)
-    const result = await service.transferOwnership(slug, Number(newOwnerId))
+
+    const result = await TeamService.transferOwnership(ctx, Number(newOwnerId))
+
     return res.status(StatusCodes.OK).json({
       success: true,
       message: 'Ownership transferred successfully',

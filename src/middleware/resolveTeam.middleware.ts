@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { db } from "../config/db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { teamMembers, teams } from "../db/schema/tables/teams";
 import { TeamContext } from "../types/context.type";
 
@@ -11,12 +11,12 @@ import { TeamContext } from "../types/context.type";
 
 export const resolveTeam = async (req: Request, res: Response, next: NextFunction) => {
   // 1. Ensure authentication has run and set userId
-  const userId = (req as any).userId
+  const userId = (req as any).user?.id
   if (!userId) return res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Authentication required' })
   
 
   // 2. Extract team slug from URL parameter
-  const slug = req.params.slug
+  const slug = req.params.slug as string
   if (!slug) return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Team slug is required' })
 
   // 3. Find the team (must exist and not be soft-deleted)
@@ -26,10 +26,11 @@ export const resolveTeam = async (req: Request, res: Response, next: NextFunctio
     .where(
       and(
         eq(teams.slug, slug),
-        eq(teams.deletedAt, null)
+        isNull(teams.deletedAt)
       )
     )
-  if (!team) return res.status(StatusCodes.NOT_FOUND).json({ message: 'Team not found' })
+
+  if (!team.length) return res.status(StatusCodes.NOT_FOUND).json({ message: 'Team not found' })
 
   
   // 4. Find the user's active membership in this team
@@ -38,16 +39,17 @@ export const resolveTeam = async (req: Request, res: Response, next: NextFunctio
     .from(teamMembers)
     .where(
       and(
-        eq(teamMembers.userId, team[0].id),
-        eq(teamMembers.teamId, teams.id),
+        eq(teamMembers.userId, userId),
+        eq(teamMembers.teamId, team[0].id),
         eq(teamMembers.status, 'active')
       )
     )
-    if (!membership) return res.status(StatusCodes.FORBIDDEN).json({ message: 'You are not a member in this team' })
+
+  if (!membership.length) return res.status(StatusCodes.FORBIDDEN).json({ message: 'You are not a member in this team' })
   
   
   // 5. Build the teamContext 
-  const teamContext: TeamContext = {
+  const teamCtx: TeamContext = {
     teamId: team[0].id,
     teamSlug: team[0].slug,
     membershipId: membership[0].id,
@@ -58,6 +60,6 @@ export const resolveTeam = async (req: Request, res: Response, next: NextFunctio
 
   
   // 6. Attach to request and proceed
-  (req as any).teamContext = teamContext
+  (req as any).teamCtx = teamCtx
   next()
 }
