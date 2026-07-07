@@ -45,7 +45,7 @@ export const getClient = asyncHandler(async (req: any, res: Response) => {
 
 export const getClientInsight = asyncHandler(async(req: any, res: Response) => {
     const clientId = parseInt(req.params.id);
-    const teamId = req.teamContext.teamId;
+    const teamId = req.teamContext?.teamId ?? null;
     const ownerId = req.user.id;
     
     const insight = await clientService.getClientInsight(clientId, teamId, ownerId);

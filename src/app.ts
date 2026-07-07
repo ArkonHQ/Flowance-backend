@@ -35,8 +35,7 @@ app.use('/api/teams/:slug/clients', clientRouter);
 
 app.use('/api/teams/:slug/tags', tagRouter);
 
-// Timer is user-scoped (no team context needed)
-app.use('/api/timer', timerRouter);
+app.use('/api/teams/:slug/timer', timerRouter);
 
 
 
