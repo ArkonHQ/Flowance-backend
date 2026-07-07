@@ -8,27 +8,34 @@ import { and, eq } from "drizzle-orm";
 
 export const requireTeamRole = (...allowedRoles: string[]) => {
   
-  return async (req: Request, res: Response, next:NextFunction) => {
-    const userId = (req as any).userId
+  return async (req: Request, res: Response, next: NextFunction) => {
+    // Use better-auth text user ID directly
+    const userId: string = (req as any).user?.id
     if (!userId) return res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Authentication required' })
 
+    // If teamCtx is already resolved (by resolveTeam) use it to check role
+    const teamCtx = (req as any).teamCtx
+    if (teamCtx) {
+      const effectiveRole = teamCtx.isOwner ? 'owner' : teamCtx.role
+      if (!allowedRoles.includes(effectiveRole)) {
+        return res.status(StatusCodes.FORBIDDEN).json({ message: 'Insufficient permissions' })
+      }
+      return next()
+    }
+
+    // Fallback: resolve team from slug
     const { slug } = req.params
-    if (!slug || typeof slug !== 'string') return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Team slug is required'})
+    if (!slug || typeof slug !== 'string') return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Team slug is required' })
 
     const team = await db
       .select()
       .from(teams)
       .where(eq(teams.slug, slug))
     
-    if (!team) {
+    if (!team.length) {
       return res.status(StatusCodes.NOT_FOUND).json({ message: 'Team not found' })
     }
 
-    // Attach team for later use
-    (req as any).team = team
-    
-
-    // Find active membership
     const [membership] = await db
       .select()
       .from(teamMembers)
@@ -38,20 +45,16 @@ export const requireTeamRole = (...allowedRoles: string[]) => {
           eq(teamMembers.userId, userId),
           eq(teamMembers.status, 'active')
         )
-      ) 
+      )
 
-      if (!membership) return res.status(StatusCodes.FORBIDDEN).json({ message: 'Not a member of this team' })
+    if (!membership) return res.status(StatusCodes.FORBIDDEN).json({ message: 'Not a member of this team' })
 
-      
-      // Resolve effictive role: owner if team.ownerId matches else membership.role
-      const effictiveRole = team[0].ownerId === userId ? 'owner' : membership.role
-      
-      if (!allowedRoles.includes(effictiveRole)){
-         return res.status(StatusCodes.FORBIDDEN).json({ message: 'Insufficient permissions'})
-      }
+    const effectiveRole = team[0].ownerId === userId ? 'owner' : membership.role
+    
+    if (!allowedRoles.includes(effectiveRole)) {
+      return res.status(StatusCodes.FORBIDDEN).json({ message: 'Insufficient permissions' })
+    }
 
-      (res as any).membership = membership
-      next()
-
+    next()
   }
 }

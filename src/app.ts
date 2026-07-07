@@ -2,7 +2,6 @@ import express from 'express';
 import { toNodeHandler } from "better-auth/node";
 import helmet from 'helmet';
 import cors from 'cors';
-import authRoute from './modules/auth/auth.routes';
 import clientRouter from "./modules/client/client.routes";
 import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import invoiceRoute from "./modules/invoice/invoice.routes";
@@ -11,6 +10,7 @@ import taskRouter from "./modules/task/task.routes";
 import { auth } from './lib/auth';
 import timerRouter from './modules/timer/timer.routes';
 import tagRouter from './modules/tags/tag.routes';
+import teamRouter from './modules/teams/team.routes';
 const app = express();
 
 app.use(cors({
@@ -36,6 +36,8 @@ app.use('/api/teams/:slug/clients', clientRouter);
 app.use('/api/teams/:slug/tags', tagRouter);
 
 app.use('/api/teams/:slug/timer', timerRouter);
+
+app.use('/api', teamRouter);
 
 
 

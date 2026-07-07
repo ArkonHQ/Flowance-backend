@@ -190,6 +190,13 @@
       "when": 1783415484474,
       "tag": "0026_chunky_juggernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1783777308229,
+      "tag": "0027_next_meltdown",
+      "breakpoints": true
     }
   ]
 }

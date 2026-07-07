@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../../config/db";
 import { teamMembers, teams } from "../../db/schema/tables/teams";
-import { users } from "../../db/schema/tables/users";
+import { betterAuthUser } from "../../db/schema/tables/auth";
 import crypto from "crypto";
 
 
@@ -12,24 +12,25 @@ import crypto from "crypto";
 
 export class TeamMembersService {
 
-  constructor(private inviterId: number) { }
+  constructor(private inviterId: string) { }
 
-  async inviteUser(teamSlug: string, inviteeId: number) {
+  async inviteUser(teamSlug: string, email: string) {
     // 1. Find the team by its slug
     const team = await db
       .select()
       .from(teams)
       .where(eq(teams.slug, teamSlug))
 
-    if (!team) throw new Error('Team not found');
+    if (!team || team.length === 0) throw new Error('Team not found');
 
-    // 2. Confirm the user to be invited really exists
+    // 2. Confirm the user to be invited really exists (by email in better_auth_user)
     const invitee = await db
       .select()
-      .from(users)
-      .where(eq(users.id, inviteeId))
+      .from(betterAuthUser)
+      .where(eq(betterAuthUser.email, email))
 
-    if (!invitee) throw new Error('User not found');
+    if (!invitee || invitee.length === 0) throw new Error('User not found');
+    const inviteeId = invitee[0].id;
 
     // 3. Check existing membership (prevents duplicate invitations)
     const existingMembership = await db
@@ -43,20 +44,15 @@ export class TeamMembersService {
       )
 
     if (existingMembership.length > 0) {
-      // Active member -> already in the team
       if (existingMembership[0].status === 'active') {
         throw new Error('User is already a member of this team');
       }
-
-      // Pending invitaion and not expired -> duplicate
       if (existingMembership[0].status === 'invited' &&
         existingMembership[0].invitationExpiresAt &&
         new Date(existingMembership[0].invitationExpiresAt) > new Date()
       ) {
         throw new Error('User has already been invited to this team');
       }
-
-      // if the old invitation expired or declined we could update it, but for simplicity we just insert a new one
     }
 
     // 4. Generate secure token and expiry (7 days from now)
@@ -70,9 +66,9 @@ export class TeamMembersService {
       .values({
         teamId: team[0].id,
         userId: inviteeId,
-        role: 'member',     // Invitees always start as a member 
+        role: 'member',
         status: 'invited',
-        invitedBy: this.inviterId,        // WHO sent the invite
+        invitedBy: this.inviterId,
         invitationToken,
         invitationExpiresAt,
         createdAt: new Date(),
@@ -80,41 +76,31 @@ export class TeamMembersService {
       })
       .returning()
 
-
-    console.log(`Invitation link: /invitations/ ${invitationToken}/accept`)
+    console.log(`Invitation link: /invitations/${invitationToken}/accept`)
 
     return newMembership
   }
 
 
   async acceptInvitation(token: string) {
-    // 1. Find the membership row that matches the token 
     const membership = await db
       .select()
       .from(teamMembers)
       .where(eq(teamMembers.invitationToken, token))
-  
-    
-    if (!membership) throw new Error ('Invalid invitation token')
 
-    // 2. Ensure the invitation belongs to the authenticated user
-    if (membership[0].userId !== this.inviterId) throw new Error ('This invitation is not for your account')
+    if (!membership || membership.length === 0) throw new Error('Invalid invitation token')
 
-    // 3. check expiry
-    if (membership[0].invitationExpiresAt && new Date(membership[0].invitationExpiresAt) < new Date () ) {
-      // Mark as expired so it's clear
-      await db 
+    if (membership[0].userId !== this.inviterId) throw new Error('This invitation is not for your account')
+
+    if (membership[0].invitationExpiresAt && new Date(membership[0].invitationExpiresAt) < new Date()) {
+      await db
         .update(teamMembers)
-        .set({
-          status: 'expired',
-          updatedAt: new Date()
-        })
+        .set({ status: 'expired', updatedAt: new Date() })
         .where(eq(teamMembers.id, membership[0].id))
 
-      throw new Error ('Invitaion has expired')
+      throw new Error('Invitation has expired')
     }
 
-    // 5. Accept: update the membership
     const [updated] = await db
       .update(teamMembers)
       .set({
@@ -133,32 +119,26 @@ export class TeamMembersService {
   }
 
 
-  async declineInvitation (token: string) {
+  async declineInvitation(token: string) {
     const membership = await db
       .select()
       .from(teamMembers)
       .where(eq(teamMembers.invitationToken, token))
 
+    if (!membership || membership.length === 0) throw new Error('Invalid invitation token')
+    if (membership[0].userId !== this.inviterId) throw new Error('This invitation is not for your account')
 
-    if (!membership) throw new Error ('Invalid invitation token')
-    if (membership[0].userId !== this.inviterId) throw new Error ('This invitation is not for your account')
+    if (membership[0].status !== 'invited') throw new Error('Invalid invitation status')
 
-    if (membership[0].status !== 'invited') throw new Error ('Invalid invitation status')
-
-    if (membership[0].invitationExpiresAt && new Date(membership[0].invitationExpiresAt) < new Date () ) {
-      // Mark as expired so it's clear
-      await db 
+    if (membership[0].invitationExpiresAt && new Date(membership[0].invitationExpiresAt) < new Date()) {
+      await db
         .update(teamMembers)
-        .set({
-          status: 'expired',
-          updatedAt: new Date()
-        })
+        .set({ status: 'expired', updatedAt: new Date() })
         .where(eq(teamMembers.id, membership[0].id))
 
-      throw new Error ('Invitaion has expired')
+      throw new Error('Invitation has expired')
     }
 
-    // Mark as declined
     const [updated] = await db
       .update(teamMembers)
       .set({
@@ -171,5 +151,36 @@ export class TeamMembersService {
       .returning()
 
     return updated
+  }
+
+  async getInvitations() {
+    const invitations = await db
+      .select({
+        id: teamMembers.id,
+        teamId: teamMembers.teamId,
+        status: teamMembers.status,
+        invitationToken: teamMembers.invitationToken,
+        team: {
+          id: teams.id,
+          name: teams.name,
+          logo: teams.logo
+        },
+        inviter: {
+          id: betterAuthUser.id,
+          name: betterAuthUser.name,
+          email: betterAuthUser.email
+        }
+      })
+      .from(teamMembers)
+      .innerJoin(teams, eq(teamMembers.teamId, teams.id))
+      .leftJoin(betterAuthUser, eq(teamMembers.invitedBy, betterAuthUser.id))
+      .where(
+        and(
+          eq(teamMembers.userId, this.inviterId),
+          eq(teamMembers.status, 'invited')
+        )
+      )
+
+    return invitations
   }
 }

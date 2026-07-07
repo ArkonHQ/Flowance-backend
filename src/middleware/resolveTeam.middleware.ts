@@ -10,10 +10,9 @@ import { TeamContext } from "../types/context.type";
 
 
 export const resolveTeam = async (req: Request, res: Response, next: NextFunction) => {
-  // 1. Ensure authentication has run and set userId
-  const userId = (req as any).user?.id
+  // 1. Ensure authentication has run userId is the better_auth_user text ID
+  const userId: string = (req as any).user?.id
   if (!userId) return res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Authentication required' })
-  
 
   // 2. Extract team slug from URL parameter
   const slug = req.params.slug as string
@@ -22,7 +21,7 @@ export const resolveTeam = async (req: Request, res: Response, next: NextFunctio
   // 3. Support the special 'personal' slug a virtual personal workspace
   if (slug === 'personal') {
     const personalCtx: TeamContext = {
-      teamId: null as any,         // null teamId = personal scope (service filters by userId only)
+      teamId: null as any,
       teamSlug: 'personal',
       membershipId: null as any,
       userId,
@@ -30,12 +29,12 @@ export const resolveTeam = async (req: Request, res: Response, next: NextFunctio
       isOwner: true,
     }
     ;(req as any).teamCtx = personalCtx
-    ;(req as any).teamContext = personalCtx   // for task/project/invoice controllers
+    ;(req as any).teamContext = personalCtx
     return next()
   }
 
   // 4. Find the team (must exist and not be soft-deleted)
-  const team = await db   
+  const team = await db
     .select()
     .from(teams)
     .where(
@@ -47,7 +46,7 @@ export const resolveTeam = async (req: Request, res: Response, next: NextFunctio
 
   if (!team.length) return res.status(StatusCodes.NOT_FOUND).json({ message: 'Team not found' })
 
-  
+
   // 5. Find the user's active membership in this team
   const membership = await db
     .select()
@@ -62,8 +61,8 @@ export const resolveTeam = async (req: Request, res: Response, next: NextFunctio
 
   if (!membership.length) return res.status(StatusCodes.FORBIDDEN).json({ message: 'You are not a member in this team' })
   
-  
-  // 6. Build the teamContext 
+
+  // 6. Build the teamContext
   const teamCtx: TeamContext = {
     teamId: team[0].id,
     teamSlug: team[0].slug,
@@ -71,11 +70,10 @@ export const resolveTeam = async (req: Request, res: Response, next: NextFunctio
     userId,
     role: membership[0].role,
     isOwner: team[0].ownerId === userId
-  };
+  }
 
-  
-  // 7. Attach to request and proceed (set both names for backwards compatibility)
+  // 7. Attach to request and proceed
   ;(req as any).teamCtx = teamCtx
-  ;(req as any).teamContext = teamCtx   // for task/project/invoice controllers
+  ;(req as any).teamContext = teamCtx
   next()
 }

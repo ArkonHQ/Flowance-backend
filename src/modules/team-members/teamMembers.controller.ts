@@ -7,19 +7,19 @@ export const inviteMember = asyncHandler (async (req: any, res: any) => {
 
   try { 
     
-    const inviterId = req.user.id
+    const inviterId = (req as any).user?.id as string
     if (!inviterId) return res.status(StatusCodes.UNAUTHORIZED).json({ message:'Authentication required' })
     
 
     const { slug } = req.params
-    const {userId: inviteeId} = req.body
+    const { email } = req.body
     
 
-    if (!inviteeId || typeof inviteeId !== 'number') return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Valid userId is required' })
+    if (!email || typeof email !== 'string') return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Valid email is required' })
 
     // Create service instance and excute 2
     const service = new TeamMembersService(inviterId)
-    const membership = await service.inviteUser(slug, inviteeId)
+    const membership = await service.inviteUser(slug, email)
 
     res.status(StatusCodes.CREATED).json(membership)
       
@@ -39,7 +39,7 @@ export const acceptInvitation = asyncHandler (async (req: any, res: any) => {
 
      try {
     
-    const currentUserId = req.user.id
+    const currentUserId = (req as any).user?.id as string
     if (!currentUserId) return res.status(StatusCodes.UNAUTHORIZED).json({message: 'Authentication required'})
     
     
@@ -66,7 +66,7 @@ export const acceptInvitation = asyncHandler (async (req: any, res: any) => {
 export const declineInvitation = asyncHandler (async (req: any, res: any) => {
 
   try {
-    const currentUserId = req.user.id
+    const currentUserId = (req as any).user?.id as string
     if (!currentUserId) return res.status(StatusCodes.UNAUTHORIZED).json({message: 'Authentication required'})
 
 
@@ -85,5 +85,19 @@ export const declineInvitation = asyncHandler (async (req: any, res: any) => {
       console.error('Unexpected error:', err)
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: err.message })
     }
+  }
+})
+
+export const getInvitations = asyncHandler (async (req: any, res: any) => {
+  try {
+    const currentUserId = (req as any).user?.id as string
+    if (!currentUserId) return res.status(StatusCodes.UNAUTHORIZED).json({message: 'Authentication required'})
+
+    const service = new TeamMembersService(currentUserId)
+    const invitations = await service.getInvitations()
+
+    res.status(StatusCodes.OK).json({ success: true, data: invitations})
+  } catch (err: any) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: err.message })
   }
 })

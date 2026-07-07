@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "../../config/db";
 import { teamMembers, teams } from "../../db/schema/tables/teams";
-import { users } from "../../db/schema/tables/users";
+import { betterAuthUser } from "../../db/schema/tables/auth";
 import { TeamContext } from "../../types/context.type";
 
 
@@ -9,10 +9,10 @@ import { TeamContext } from "../../types/context.type";
 
 export class TeamService {
 
-  static async createTeam(userId: number, data: { name: string; description?: string; logo?: string }) {
-    let baseSlug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') // Making slug from team name
-    if (!baseSlug) baseSlug = 'team' // If slug is empty, set it to 'team'
-    const slug = `${baseSlug}-${Date.now()}` // Add timestamp to slug to make it unique
+  static async createTeam(userId: string, data: { name: string; description?: string; logo?: string }) {
+    let baseSlug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
+    if (!baseSlug) baseSlug = 'team'
+    const slug = `${baseSlug}-${Date.now()}`
 
     const [team] = await db
       .insert(teams)
@@ -53,7 +53,6 @@ export class TeamService {
 
     const isAdminOrOwner = isOwner || role === 'admin'
 
-    // Fetch members   admins/owners see all statuses, regular members only see active
     const conditions = [eq(teamMembers.teamId, teamId)]
     if (!isAdminOrOwner) {
       conditions.push(eq(teamMembers.status, 'active'))
@@ -69,11 +68,12 @@ export class TeamService {
         leftAt: teamMembers.leftAt,
         lastActiveAt: teamMembers.lastActiveAt,
         invitedBy: teamMembers.invitedBy,
-        userName: users.name,
-        userAvatar: users.image,
+        userName: betterAuthUser.name,
+        userEmail: betterAuthUser.email,
+        userAvatar: betterAuthUser.image,
       })
       .from(teamMembers)
-      .innerJoin(users, eq(users.id, teamMembers.userId))
+      .innerJoin(betterAuthUser, eq(betterAuthUser.id, teamMembers.userId))
       .where(and(...conditions))
 
     return {
@@ -93,7 +93,6 @@ export class TeamService {
   }
 
 
-  // Update team info (admin/owner only enforced by middleware)
   static async updateTeam(ctx: TeamContext, data: { name?: string; description?: string; logo?: string }) {
     const { teamId, userId } = ctx
 
@@ -112,7 +111,6 @@ export class TeamService {
   }
 
 
-  // Soft-delete the team (owner only enforced by middleware)
   static async deleteTeam(ctx: TeamContext) {
     const { teamId, userId, isOwner } = ctx
 
@@ -127,18 +125,14 @@ export class TeamService {
   }
 
 
-  // Remove a member from the team (admin OR owner only enforced by middleware)
-  static async removeMember(ctx: TeamContext, memberUserId: number) {
+  static async removeMember(ctx: TeamContext, memberUserId: string) {
     const { teamId, userId, role, isOwner } = ctx
 
-    // Fetch the team to check ownerId
     const team = await db.select().from(teams).where(eq(teams.id, teamId))
     if (!team.length) throw new Error('Team not found')
 
-    // Prevent removing the owner
     if (memberUserId === team[0].ownerId) throw new Error('You cannot remove the owner')
 
-    // Find target membership
     const target = await db
       .select()
       .from(teamMembers)
@@ -151,10 +145,8 @@ export class TeamService {
 
     if (!target.length || target[0].status !== 'active') throw new Error('Member not found or not active')
 
-    // Admin cannot remove another admin
     if (target[0].role === 'admin' && !isOwner) throw new Error('You cannot remove another admin')
 
-    // Soft-delete
     await db
       .update(teamMembers)
       .set({
@@ -169,8 +161,7 @@ export class TeamService {
   }
 
 
-  // Change a member's role (admin/owner only enforced by middleware)
-  static async changeMemberRole(ctx: TeamContext, memberUserId: number, newRole: 'admin' | 'member') {
+  static async changeMemberRole(ctx: TeamContext, memberUserId: string, newRole: 'admin' | 'member') {
     const { teamId, userId, isOwner } = ctx
 
     if (memberUserId === userId) throw new Error('You cannot change your own role')
@@ -192,8 +183,7 @@ export class TeamService {
 
     if (!target.length || target[0].status !== 'active') throw new Error('Member not found or not active')
 
-    // Only owner can promote/demote admins
-    if (target[0].role === 'admin' && !isOwner) throw new Error('You cannot change another admin\'s role')
+    if (target[0].role === 'admin' && !isOwner) throw new Error("You cannot change another admin's role")
 
     const [updated] = await db
       .update(teamMembers)
@@ -209,7 +199,6 @@ export class TeamService {
   }
 
 
-  // Leave the team (cannot leave if you are the owner)
   static async leaveTeam(ctx: TeamContext) {
     const { teamId, membershipId, userId, isOwner } = ctx
 
@@ -229,8 +218,7 @@ export class TeamService {
   }
 
 
-  // Get all teams the user is an active member of
-  static async getUserTeams(userId: number) {
+  static async getUserTeams(userId: string) {
     const memberships = await db
       .select()
       .from(teamMembers)
@@ -249,13 +237,40 @@ export class TeamService {
       .from(teams)
       .where(and(inArray(teams.id, teamIds), isNull(teams.deletedAt)))
 
+    const allActiveMembers = await db
+      .select({
+         teamId: teamMembers.teamId,
+         userId: betterAuthUser.id,
+         name: betterAuthUser.name,
+         image: betterAuthUser.image
+      })
+      .from(teamMembers)
+      .innerJoin(betterAuthUser, eq(teamMembers.userId, betterAuthUser.id))
+      .where(
+         and(
+            inArray(teamMembers.teamId, teamIds),
+            eq(teamMembers.status, 'active')
+         )
+      )
 
-    return teamsData
+    return teamsData.map(team => {
+      const membership = memberships.find(m => m.teamId === team.id)
+      const members = allActiveMembers
+         .filter(m => m.teamId === team.id)
+         .map(m => ({ id: m.userId, name: m.name, image: m.image }))
+
+      return {
+        ...team,
+        teamMember: team.ownerId === userId
+          ? { role: 'owner', status: 'active' }
+          : membership ? { role: membership.role, status: membership.status } : { role: 'member', status: 'active' },
+        members
+      }
+    })
   }
 
 
-  // Transfer ownership to another active member (owner only)
-  static async transferOwnership(ctx: TeamContext, newOwnerId: number) {
+  static async transferOwnership(ctx: TeamContext, newOwnerId: string) {
     const { teamId, userId, isOwner } = ctx
 
     if (!isOwner) throw new Error('You do not own this team. Only the owner can transfer ownership')
@@ -284,7 +299,6 @@ export class TeamService {
       })
       .where(eq(teams.id, teamId))
 
-    // Promote new owner to admin if they aren't already
     if (membership[0].role !== 'admin') {
       await db
         .update(teamMembers)

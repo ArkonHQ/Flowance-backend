@@ -6,7 +6,7 @@ import { TeamService } from "./teams.service";
 
 export const createTeam = asyncHandler (async (req: any, res: any) => {
   try {
-    const userId = req.user?.id
+    const userId = (req as any).user?.id as string
     const { name, description, logo } = req.body
 
     if (!name) return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Team name is required' })
@@ -53,6 +53,14 @@ export const updateTeam = asyncHandler (async (req: any, res: any) => {
   
   try {
     const ctx = req.teamCtx
+
+    if (ctx.teamSlug === 'personal') {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        message: 'Personal workspace cannot be edited'
+      })
+    }
+
     const { name, description, logo } = req.body
 
     const updated = await TeamService.updateTeam(ctx, { name, description, logo })
@@ -76,6 +84,13 @@ export const deleteTeam = asyncHandler (async (req: any, res: any) => {
   try {
     const ctx = req.teamCtx
 
+    if (ctx.teamSlug === 'personal') {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        message: 'Personal workspace cannot be deleted'
+      })
+    }
+
     const result = await TeamService.deleteTeam(ctx)
 
     return res.status(StatusCodes.OK).json({
@@ -97,7 +112,7 @@ export const removeMember = asyncHandler (async (req: any, res: any) => {
     const ctx = req.teamCtx
     const { memberId } = req.params
 
-    const result = await TeamService.removeMember(ctx, Number(memberId))
+    const result = await TeamService.removeMember(ctx, memberId)
 
     return res.status(StatusCodes.OK).json({
       success: true,
@@ -122,7 +137,7 @@ export const changeMemberRole = asyncHandler (async (req: any, res: any) => {
       return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Invalid role' })
     }
 
-    const result = await TeamService.changeMemberRole(ctx, Number(memberId), role)
+    const result = await TeamService.changeMemberRole(ctx, memberId, role)
 
     return res.status(StatusCodes.OK).json({
       success: true,
@@ -159,7 +174,7 @@ export const leaveTeam = asyncHandler (async (req: any, res: any) => {
 
 export const getUserTeams = asyncHandler (async (req: any, res: any) => {
   try {
-    const userId = req.user.id
+    const userId = (req as any).user?.id as string
 
     const result = await TeamService.getUserTeams(userId)
 
@@ -182,7 +197,7 @@ export const transferOwnership = asyncHandler (async (req: any, res: any) => {
     const ctx = req.teamCtx
     const { newOwnerId } = req.body
 
-    const result = await TeamService.transferOwnership(ctx, Number(newOwnerId))
+    const result = await TeamService.transferOwnership(ctx, String(newOwnerId))
 
     return res.status(StatusCodes.OK).json({
       success: true,
