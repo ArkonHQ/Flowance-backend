@@ -4,6 +4,14 @@ import * as projectService from "./project.service";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { TaggingService } from "../tags/tagging.service";
 
+
+// Helper: check if a project belongs to the current context (team or personal)
+const isProjectOwned = (project: any, req: any): boolean => {
+    if (req.teamContext.teamId === null) return project.ownerId === req.user.id
+    return project.teamId === req.teamContext.teamId
+}
+
+
 export const getAllProjects = asyncHandler(async (req: any, res: Response) => {
     const allProjects = await projectService.getProjectsByTeam(req.teamContext.teamId, req.user.id);
     res.json({
@@ -23,7 +31,7 @@ export const getOneProject = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    if (project.teamId !== req.teamContext.teamId) {
+    if (!isProjectOwned(project, req)) {
         return res.status(StatusCodes.FORBIDDEN).json({
             success: false,
             message: "Not authorized"
@@ -65,7 +73,7 @@ export const updateProject = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    if (project.teamId !== req.teamContext.teamId) {
+    if (!isProjectOwned(project, req)) {
         return res.status(StatusCodes.FORBIDDEN).json({
             success: false,
             message: "Not authorized"
@@ -80,7 +88,7 @@ export const updateProject = asyncHandler(async (req: any, res: Response) => {
     }
 
     await projectService.updateProject(parseInt(req.params.id), updateData);
-    
+
     const finalProject = await projectService.getProjectsWithTags(parseInt(req.params.id), req.teamContext.teamId, req.user.id);
 
     res.status(StatusCodes.OK).json({
@@ -100,7 +108,7 @@ export const deleteProject = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    if (project.teamId !== req.teamContext.teamId) {
+    if (!isProjectOwned(project, req)) {
         return res.status(StatusCodes.FORBIDDEN).json({
             success: false,
             message: "Not authorized"

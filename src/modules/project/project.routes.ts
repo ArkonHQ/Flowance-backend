@@ -5,13 +5,12 @@ import { validate } from "../../middleware/validate.middleware";
 import { createProjectSchema, updateProjectSchema } from "./project.schema";
 import attachmentRoutes from "./attachments/attachment.routes";
 import { resolveTeam } from "../../middleware/resolveTeam.middleware";
-import { authenticate } from "../../middleware/authenticate.middleware";
 import { requirePermission } from "../../middleware/requirePermission.middleware";
 
 
 const router = Router({ mergeParams: true });
 
-router.use(authenticate);
+router.use(requireAuth);
 
 router.use('/attachments', attachmentRoutes)
 

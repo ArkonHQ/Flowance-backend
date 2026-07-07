@@ -22,8 +22,7 @@ app.use(helmet());
 
 app.use('/api/auth', toNodeHandler(auth.handler));
 
-app.use('/api/clients', clientRouter);
-
+// All resource routes scoped under a team slug (pass 'personal' for personal workspace)
 app.use('/api/teams/:slug/dashboard', dashboardRoutes);
 
 app.use('/api/teams/:slug/invoices', invoiceRoute);
@@ -32,9 +31,12 @@ app.use('/api/teams/:slug/projects', projectRoute);
 
 app.use('/api/teams/:slug/tasks', taskRouter);
 
-app.use('/api/timer', timerRouter);
+app.use('/api/teams/:slug/clients', clientRouter);
 
-app.use('/api/tags', tagRouter);
+app.use('/api/teams/:slug/tags', tagRouter);
+
+// Timer is user-scoped (no team context needed)
+app.use('/api/timer', timerRouter);
 
 
 
@@ -42,7 +44,8 @@ app.get('/health', (_req: any, res: any) => {
     res.status(200).json({ status: 'OK' });
 });
 
-app.use((err: { statusCode: number; message: string; }, _req: any, res: any, _next: any) => {
+app.use((err: any, _req: any, res: any, _next: any) => {
+    console.error(`[Error] ${_req.method} ${_req.originalUrl}:`, err?.message);
     const statusCode = err.statusCode || 500;
     res.status(statusCode).json({
         success: false,

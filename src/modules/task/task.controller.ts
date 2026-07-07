@@ -9,6 +9,7 @@ export const getAllTasks = asyncHandler(async (req: any, res: Response) => {
     const { projectId } = req.query;
     const allTasks = await taskService.getTasksByTeam(
         req.teamContext.teamId,
+        req.user.id,
         projectId ? parseInt(projectId as string) : undefined
     );
 
@@ -38,13 +39,13 @@ export const getOneTask = asyncHandler(async (req: any, res: Response) => {
 
 export const createTask = asyncHandler(async (req: any, res: Response) => {
     const newTask = await taskService.createTask(req.user.id, req.teamContext.teamId, req.body);
-    
+
     const { tagIds } = req.body;
     if (tagIds !== undefined) {
         const taggingService = new TaggingService(req.user.id, req.teamContext.teamId);
         await taggingService.replaceTags('task', newTask.id, tagIds);
     }
-    
+
     const finalTask = await taskService.getTaskWihTags(newTask.id, req.teamContext.teamId, req.user.id);
 
     res.status(StatusCodes.CREATED).json({
@@ -55,7 +56,7 @@ export const createTask = asyncHandler(async (req: any, res: Response) => {
 });
 
 export const updateTask = asyncHandler(async (req: any, res: Response) => {
-    const task = await taskService.getTaskById(parseInt(req.params.id), req.teamContext.teamId);
+    const task = await taskService.getTaskById(parseInt(req.params.id), req.teamContext.teamId, req.user.id);
     const ownerId = req.user.id
     const taskId = req.params.id
 
@@ -89,7 +90,7 @@ export const updateTask = asyncHandler(async (req: any, res: Response) => {
 });
 
 export const deleteTask = asyncHandler(async (req: any, res: Response) => {
-    const task = await taskService.getTaskById(parseInt(req.params.id), req.teamContext.teamId);
+    const task = await taskService.getTaskById(parseInt(req.params.id), req.teamContext.teamId, req.user.id);
 
     if (!task) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -105,14 +106,13 @@ export const deleteTask = asyncHandler(async (req: any, res: Response) => {
     });
 });
 
-export const getTotalHours = asyncHandler(async (req:any, res: any) => {
+export const getTotalHours = asyncHandler(async (req: any, res: any) => {
+    const ownerId = req.user.id
+    const service = new TimeEntryService(ownerId, req.teamContext.teamId)
+    const totalHours = await service.getTotalHours()
 
-  const ownerId = req.user.id
-  const service = new TimeEntryService(ownerId, req.teamContext.teamId)
-  const totalHours = await service.getTotalHours()
-
-  res.json({
-    success: true,
-    totalHours
-  })
+    res.json({
+        success: true,
+        totalHours
+    })
 })

@@ -24,7 +24,12 @@ export const getClient = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    if (client.teamId !== req.teamContext.teamId) {
+    // Ownership: personal workspace checks ownerId, team workspace checks teamId
+    const isOwned = req.teamContext.teamId === null
+        ? client.ownerId === req.user.id
+        : client.teamId === req.teamContext.teamId
+
+    if (!isOwned) {
         return res.status(StatusCodes.FORBIDDEN).json({
             success: false,
             message: 'Not authorized',
@@ -88,7 +93,11 @@ export const deleteClient = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    if (client.teamId !== req.teamContext.teamId) {
+    const isDeleteOwned = req.teamContext.teamId === null
+        ? client.ownerId === req.user.id
+        : client.teamId === req.teamContext.teamId
+
+    if (!isDeleteOwned) {
         return res.status(StatusCodes.FORBIDDEN).json({
             success: false,
             message: `Not authorized`,
@@ -113,7 +122,11 @@ export const updateClient = asyncHandler(async (req: any, res: Response) => {
         });
     }
 
-    if (client.teamId !== req.teamContext.teamId) {
+    const isUpdateOwned = req.teamContext.teamId === null
+        ? client.ownerId === req.user.id
+        : client.teamId === req.teamContext.teamId
+
+    if (!isUpdateOwned) {
         return res.status(StatusCodes.FORBIDDEN).json({
             success: false,
             message: 'Not authorized',

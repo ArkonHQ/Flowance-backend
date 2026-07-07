@@ -1,13 +1,15 @@
-import { eq } from 'drizzle-orm';
+import { eq, and, SQL } from 'drizzle-orm';
 import { db } from '../../config/db';
 import { invoices } from '../../db/schema';
 import { CreateInvoiceInput, UpdateInvoiceInput } from './invoice.schema';
 
-export const getInvoicesByTeam = async (teamId: number) => {
-    return db
-        .select()
-        .from(invoices)
-        .where(eq(invoices.teamId, teamId));
+
+export const getInvoicesByTeam = async (teamId: number | null, ownerId: string) => {
+    const scope: SQL<unknown> = teamId === null
+        ? eq(invoices.ownerId, ownerId)
+        : eq(invoices.teamId, teamId)
+
+    return db.select().from(invoices).where(scope);
 };
 
 export const getInvoiceById = async (id: number) => {
@@ -18,7 +20,7 @@ export const getInvoiceById = async (id: number) => {
     return result[0];
 };
 
-export const createInvoice = async (ownerId: string, teamId: number, data: CreateInvoiceInput) => {
+export const createInvoice = async (ownerId: string, teamId: number | null, data: CreateInvoiceInput) => {
     const [newInvoice] = await db
         .insert(invoices)
         .values({

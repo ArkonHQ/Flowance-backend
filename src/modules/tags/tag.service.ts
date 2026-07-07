@@ -1,12 +1,17 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, SQL } from "drizzle-orm";
 import { db } from "../../config/db";
 import { tags } from "../../db/schema/tables/tags";
 
-export const getTagsByTeam = async (teamId: number, ownerId: string) => {
-    return await db.select().from(tags).where(eq(tags.teamId, teamId));
+
+export const getTagsByTeam = async (teamId: number | null, ownerId: string) => {
+    const scope: SQL<unknown> = teamId === null
+        ? eq(tags.ownerId, ownerId)
+        : eq(tags.teamId, teamId)
+
+    return await db.select().from(tags).where(scope)
 }
 
-export const createTag = async (ownerId: string, teamId: number, data: { name: string; icon?: string; color?: string }) => {
+export const createTag = async (ownerId: string, teamId: number | null, data: { name: string; icon?: string; color?: string }) => {
     try {
         const newTag = await db.insert(tags).values({
             ownerId,
@@ -25,8 +30,12 @@ export const createTag = async (ownerId: string, teamId: number, data: { name: s
     }
 }
 
-export const updateTag = async (tagId: number, teamId: number, ownerId: string, data: { name?: string; icon?: string; color?: string }) => {
+export const updateTag = async (tagId: number, teamId: number | null, ownerId: string, data: { name?: string; icon?: string; color?: string }) => {
     try {
+        const scope: SQL<unknown> = teamId === null
+            ? eq(tags.ownerId, ownerId)
+            : eq(tags.teamId, teamId)
+
         const updatedTag = await db.update(tags)
             .set({
                 ...(data.name && { name: data.name }),
@@ -34,9 +43,9 @@ export const updateTag = async (tagId: number, teamId: number, ownerId: string, 
                 ...(data.color && { color: data.color }),
                 updatedAt: new Date()
             })
-            .where(and(eq(tags.id, tagId), eq(tags.teamId, teamId)))
+            .where(and(eq(tags.id, tagId), scope))
             .returning();
-        
+
         if (updatedTag.length === 0) {
             throw new Error('Tag not found or unauthorized');
         }

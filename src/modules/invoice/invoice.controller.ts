@@ -4,7 +4,7 @@ import * as invoiceService from "./invoice.service";
 import { asyncHandler } from "../../utils/asyncHandler";
 
 export const getAllInvoices = asyncHandler(async (req: any, res: Response) => {
-    const allInvoices = await invoiceService.getInvoicesByTeam(req.teamContext.teamId);
+    const allInvoices = await invoiceService.getInvoicesByTeam(req.teamContext.teamId, req.user.id);
     res.json({ success: true, invoices: allInvoices });
 });
 
@@ -15,7 +15,12 @@ export const getOneInvoice = asyncHandler(async (req: any, res: Response) => {
         return res.status(StatusCodes.NOT_FOUND).json({ message: 'Invoice not found' });
     }
 
-    if (invoice.teamId !== req.teamContext.teamId) {
+    // Ownership check: either team match or personal (ownerId match)
+    const isOwned = req.teamContext.teamId === null
+        ? invoice.ownerId === req.user.id
+        : invoice.teamId === req.teamContext.teamId
+
+    if (!isOwned) {
         return res.status(StatusCodes.FORBIDDEN).json({ message: 'Not authorized' });
     }
 
@@ -34,7 +39,11 @@ export const updateInvoice = asyncHandler(async (req: any, res: Response) => {
         return res.status(StatusCodes.NOT_FOUND).json({ message: 'Invoice not found' });
     }
 
-    if (invoice.teamId !== req.teamContext.teamId) {
+    const isOwned = req.teamContext.teamId === null
+        ? invoice.ownerId === req.user.id
+        : invoice.teamId === req.teamContext.teamId
+
+    if (!isOwned) {
         return res.status(StatusCodes.FORBIDDEN).json({ message: 'Not authorized' });
     }
 
@@ -49,7 +58,11 @@ export const deleteInvoice = asyncHandler(async (req: any, res: Response) => {
         return res.status(StatusCodes.NOT_FOUND).json({ message: 'Invoice not found' });
     }
 
-    if (invoice.teamId !== req.teamContext.teamId) {
+    const isOwned = req.teamContext.teamId === null
+        ? invoice.ownerId === req.user.id
+        : invoice.teamId === req.teamContext.teamId
+
+    if (!isOwned) {
         return res.status(StatusCodes.FORBIDDEN).json({ message: 'Not authorized' });
     }
 

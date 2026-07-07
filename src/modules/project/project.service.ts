@@ -1,10 +1,15 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, sql, SQL } from 'drizzle-orm';
 import { db } from '../../config/db';
 import { projects, tasks, timeEntries } from '../../db/schema';
 import { CreateProjectInput, UpdateProjectInput } from './project.schema';
 import { TaggingService } from '../tags/tagging.service';
 
-export const getProjectsByTeam = async (teamId: number, ownerId: string) => {
+
+export const getProjectsByTeam = async (teamId: number | null, ownerId: string) => {
+    const scope: SQL<unknown> = teamId === null
+        ? eq(projects.ownerId, ownerId)
+        : eq(projects.teamId, teamId)
+
     const projectsList = await db
         .select({
             project: projects,
@@ -15,12 +20,12 @@ export const getProjectsByTeam = async (teamId: number, ownerId: string) => {
         .from(projects)
         .leftJoin(tasks, eq(projects.id, tasks.projectId))
         .leftJoin(timeEntries, eq(tasks.id, timeEntries.taskId))
-        .where(eq(projects.teamId, teamId))
+        .where(scope)
         .groupBy(projects.id);
 
     if (projectsList.length === 0) return [];
 
-    const taggingService = new TaggingService(ownerId, teamId);
+    const taggingService = new TaggingService(ownerId, teamId as number);
     const tagsMap = await taggingService.getTagsForEntities(
         'project',
         projectsList.map(p => p.project.id)
@@ -67,7 +72,7 @@ export const getProjectById = async (id: number) => {
     return result[0];
 };
 
-export const createProject = async (ownerId: string, teamId: number, data: CreateProjectInput) => {
+export const createProject = async (ownerId: string, teamId: number | null, data: CreateProjectInput) => {
     const [newProject] = await db
         .insert(projects)
         .values({
@@ -97,22 +102,20 @@ export const updateProject = async (id: number, data: UpdateProjectInput) => {
     return updated;
 };
 
-export const getProjectsWithTags = async (projectId: number, teamId: number, ownerId: string) => {
+export const getProjectsWithTags = async (projectId: number, teamId: number | null, ownerId: string) => {
+    const scope: SQL<unknown> = teamId === null
+        ? eq(projects.ownerId, ownerId)
+        : eq(projects.teamId, teamId)
 
     const [project] = await db
         .select()
         .from(projects)
-        .where(
-            and(
-                eq(projects.id, projectId),
-                eq(projects.teamId, teamId)
-            )
-        )
+        .where(and(eq(projects.id, projectId), scope))
 
-        const taggingService = new TaggingService(ownerId, teamId)
-        const tags = await taggingService.getTagsForEntity('project', projectId)
+    const taggingService = new TaggingService(ownerId, teamId as number)
+    const tags = await taggingService.getTagsForEntity('project', projectId)
 
-        return { ...project, tags }
+    return { ...project, tags }
 }
 
 export const deleteProject = async (id: number) => {
@@ -123,8 +126,12 @@ export const deleteProject = async (id: number) => {
     return deleted;
 };
 
-export const getProjectTimeChart = async (projectId: number, teamId: number) => {
+export const getProjectTimeChart = async (projectId: number, teamId: number | null) => {
     // Returns daily summed minutes for the last 7 days for a given project
+    const teamFilter: SQL<unknown> = teamId === null
+        ? sql`1=1`
+        : eq(projects.teamId, teamId)
+
     const rows = await db
         .select({
             day: sql<string>`TO_CHAR(${timeEntries.date}, 'Dy')`,
@@ -137,7 +144,7 @@ export const getProjectTimeChart = async (projectId: number, teamId: number) => 
         .where(
             and(
                 eq(tasks.projectId, projectId),
-                eq(projects.teamId, teamId),
+                teamFilter,
                 sql`${timeEntries.date} >= NOW() - INTERVAL '7 days'`
             )
         )

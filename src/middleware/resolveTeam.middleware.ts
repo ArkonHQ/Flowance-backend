@@ -19,7 +19,22 @@ export const resolveTeam = async (req: Request, res: Response, next: NextFunctio
   const slug = req.params.slug as string
   if (!slug) return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Team slug is required' })
 
-  // 3. Find the team (must exist and not be soft-deleted)
+  // 3. Support the special 'personal' slug a virtual personal workspace
+  if (slug === 'personal') {
+    const personalCtx: TeamContext = {
+      teamId: null as any,         // null teamId = personal scope (service filters by userId only)
+      teamSlug: 'personal',
+      membershipId: null as any,
+      userId,
+      role: 'admin',
+      isOwner: true,
+    }
+    ;(req as any).teamCtx = personalCtx
+    ;(req as any).teamContext = personalCtx   // for task/project/invoice controllers
+    return next()
+  }
+
+  // 4. Find the team (must exist and not be soft-deleted)
   const team = await db   
     .select()
     .from(teams)
@@ -33,7 +48,7 @@ export const resolveTeam = async (req: Request, res: Response, next: NextFunctio
   if (!team.length) return res.status(StatusCodes.NOT_FOUND).json({ message: 'Team not found' })
 
   
-  // 4. Find the user's active membership in this team
+  // 5. Find the user's active membership in this team
   const membership = await db
     .select()
     .from(teamMembers)
@@ -48,7 +63,7 @@ export const resolveTeam = async (req: Request, res: Response, next: NextFunctio
   if (!membership.length) return res.status(StatusCodes.FORBIDDEN).json({ message: 'You are not a member in this team' })
   
   
-  // 5. Build the teamContext 
+  // 6. Build the teamContext 
   const teamCtx: TeamContext = {
     teamId: team[0].id,
     teamSlug: team[0].slug,
@@ -59,7 +74,8 @@ export const resolveTeam = async (req: Request, res: Response, next: NextFunctio
   };
 
   
-  // 6. Attach to request and proceed
-  (req as any).teamCtx = teamCtx
+  // 7. Attach to request and proceed (set both names for backwards compatibility)
+  ;(req as any).teamCtx = teamCtx
+  ;(req as any).teamContext = teamCtx   // for task/project/invoice controllers
   next()
 }

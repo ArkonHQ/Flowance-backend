@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as invoiceController from './invoice.controller';
-import { authenticate } from "../../middleware/authenticate.middleware";
+import { requireAuth } from "../../middleware/auth.middleware";
 import { resolveTeam } from "../../middleware/resolveTeam.middleware";
 import { requirePermission } from "../../middleware/requirePermission.middleware";
 import { validate } from "../../middleware/validate.middleware";
@@ -8,7 +8,7 @@ import { createInvoiceSchema, updateInvoiceSchema } from "./invoice.schema";
 
 const router = Router({ mergeParams: true });
 
-router.use(authenticate);
+router.use(requireAuth);
 router.use(resolveTeam);
 
 router.get('/', requirePermission('invoice:read'), invoiceController.getAllInvoices);
