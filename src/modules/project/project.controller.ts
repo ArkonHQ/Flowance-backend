@@ -64,7 +64,15 @@ export const createProject = asyncHandler(async (req: any, res: Response) => {
 });
 
 export const updateProject = asyncHandler(async (req: any, res: Response) => {
-    const project = await projectService.getProjectById(parseInt(req.params.id));
+    const projectId = parseInt(req.params.id);
+    if (isNaN(projectId)) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+            success: false,
+            message: 'Invalid project ID'
+        });
+    }
+
+    const project = await projectService.getProjectById(projectId);
 
     if (!project) {
         return res.status(StatusCodes.NOT_FOUND).json({
@@ -84,12 +92,12 @@ export const updateProject = asyncHandler(async (req: any, res: Response) => {
 
     if (tagIds !== undefined) {
         const taggingService = new TaggingService(req.user.id, req.teamContext.teamId);
-        await taggingService.replaceTags('project', parseInt(req.params.id), tagIds);
+        await taggingService.replaceTags('project', projectId, tagIds);
     }
 
-    await projectService.updateProject(parseInt(req.params.id), updateData);
+    await projectService.updateProject(projectId, updateData);
 
-    const finalProject = await projectService.getProjectsWithTags(parseInt(req.params.id), req.teamContext.teamId, req.user.id);
+    const finalProject = await projectService.getProjectsWithTags(projectId, req.teamContext.teamId, req.user.id);
 
     res.status(StatusCodes.OK).json({
         success: true,
