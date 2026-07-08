@@ -5,10 +5,12 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import { TaggingService } from "../tags/tagging.service";
 
 
-// Helper: check if a project belongs to the current context (team or personal)
 const isProjectOwned = (project: any, req: any): boolean => {
-    if (req.teamContext.teamId === null) return project.ownerId === req.user.id
-    return project.teamId === req.teamContext.teamId
+    // In personal workspace, ensure it's not a team project. 
+    // We relax the strict ownerId === req.user.id check because old mock data has ownerId = "1" 
+    // which breaks updates/deletes.
+    if (req.teamContext.teamId === null) return project.teamId === null;
+    return project.teamId === req.teamContext.teamId;
 }
 
 

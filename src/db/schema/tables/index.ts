@@ -7,6 +7,7 @@ import { taskMissions } from "./missions";
 import { betterAuthUser, betterAuthSession, betterAuthAccount, betterAuthVerification } from "./auth";
 import { timeEntries } from "./time-entries";
 import { timerSessions } from "./timer-sessions";
+import { teams, teamMembers } from "./teams";
 
 export {
     users,
@@ -20,5 +21,7 @@ export {
     betterAuthAccount as account,
     betterAuthVerification as verification,
     timeEntries,
-    timerSessions
+    timerSessions,
+    teams,
+    teamMembers
 };

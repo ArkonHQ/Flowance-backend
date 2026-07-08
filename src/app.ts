@@ -46,7 +46,8 @@ app.get('/health', (_req: any, res: any) => {
 });
 
 app.use((err: any, _req: any, res: any, _next: any) => {
-    console.error(`[Error] ${_req.method} ${_req.originalUrl}:`, err?.message);
+    console.error(`[Error] ${_req.method} ${_req.originalUrl}:`);
+    console.error(err?.stack || err?.message || err);
     const statusCode = err.statusCode || 500;
     res.status(statusCode).json({
         success: false,

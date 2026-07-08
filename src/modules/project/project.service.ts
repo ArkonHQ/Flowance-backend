@@ -1,21 +1,34 @@
 import { and, eq, sql, SQL } from 'drizzle-orm';
 import { db } from '../../config/db';
-import { projects, tasks, timeEntries } from '../../db/schema';
+import { projects, tasks, timeEntries, teamMembers } from '../../db/schema';
 import { CreateProjectInput, UpdateProjectInput } from './project.schema';
 import { TaggingService } from '../tags/tagging.service';
 
+
+
+const taskCountAgg = sql<number>`CAST(count(distinct ${tasks.id}) AS INTEGER)`;
+const completedTasksAgg = sql<number>`CAST(count(distinct CASE WHEN ${tasks.status} = 'done' THEN ${tasks.id} END) AS INTEGER)`;
+const totalTimeTrackedAgg = sql<number>`CAST(COALESCE(sum(${timeEntries.hours}), 0) AS FLOAT) * 60`;
 
 export const getProjectsByTeam = async (teamId: number | null, ownerId: string) => {
     const scope: SQL<unknown> = teamId === null
         ? eq(projects.ownerId, ownerId)
         : eq(projects.teamId, teamId)
 
+    let teamMembersCount = 1;
+    if (teamId !== null) {
+        const res = await db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` })
+            .from(teamMembers)
+            .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.status, 'active')));
+        teamMembersCount = res[0]?.count || 1;
+    }
+
     const projectsList = await db
         .select({
             project: projects,
-            taskCount: sql<number>`CAST(count(distinct ${tasks.id}) AS INTEGER)`,
-            completedTasks: sql<number>`CAST(count(distinct CASE WHEN ${tasks.status} = 'done' THEN ${tasks.id} END) AS INTEGER)`,
-            totalTimeTracked: sql<number>`CAST(COALESCE(sum(${timeEntries.hours}), 0) AS FLOAT) * 60`
+            taskCount: taskCountAgg,
+            completedTasks: completedTasksAgg,
+            totalTimeTracked: totalTimeTrackedAgg
         })
         .from(projects)
         .leftJoin(tasks, eq(projects.id, tasks.projectId))
@@ -59,7 +72,8 @@ export const getProjectsByTeam = async (teamId: number | null, ownerId: string) 
             totalTimeTracked: p.totalTimeTracked || 0,
             progress: progress,
             health: health,
-            tags: tagsMap[p.project.id] || []
+            tags: tagsMap[p.project.id] || [],
+            membersCount: teamMembersCount
         };
     });
 };
@@ -107,15 +121,62 @@ export const getProjectsWithTags = async (projectId: number, teamId: number | nu
         ? eq(projects.ownerId, ownerId)
         : eq(projects.teamId, teamId)
 
-    const [project] = await db
-        .select()
+    let teamMembersCount = 1;
+    if (teamId !== null) {
+        const res = await db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` })
+            .from(teamMembers)
+            .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.status, 'active')));
+        teamMembersCount = res[0]?.count || 1;
+    }
+
+    const [p] = await db
+        .select({
+            project: projects,
+            taskCount: taskCountAgg,
+            completedTasks: completedTasksAgg,
+            totalTimeTracked: totalTimeTrackedAgg
+        })
         .from(projects)
+        .leftJoin(tasks, eq(projects.id, tasks.projectId))
+        .leftJoin(timeEntries, eq(tasks.id, timeEntries.taskId))
         .where(and(eq(projects.id, projectId), scope))
+        .groupBy(projects.id);
+
+    if (!p) return null;
 
     const taggingService = new TaggingService(ownerId, teamId as number)
     const tags = await taggingService.getTagsForEntity('project', projectId)
 
-    return { ...project, tags }
+    const total = p.taskCount || 0;
+    const completed = p.completedTasks || 0;
+    const progress = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+    let health = 'Good';
+    if (p.project.status === 'completed') health = 'Completed';
+    else if (p.project.status === 'cancelled') health = 'Cancelled';
+    else if (p.project.status === 'on_hold') health = 'At Risk';
+    else if (p.project.status === 'planning') health = 'Planning';
+    else {
+        const deadline = p.project.deadline;
+        if (deadline) {
+            const now = new Date();
+            const isOverdue = deadline < now;
+            const isNearDeadLine = deadline < new Date(now.getTime() + 7 * 86400000); // 7 days
+            if ((isOverdue || isNearDeadLine) && progress < 50) {
+                health = 'At Risk';
+            }
+        }
+    }
+
+    return {
+        ...p.project,
+        taskCount: total,
+        totalTimeTracked: p.totalTimeTracked || 0,
+        progress: progress,
+        health: health,
+        tags,
+        membersCount: teamMembersCount
+    }
 }
 
 export const deleteProject = async (id: number) => {
