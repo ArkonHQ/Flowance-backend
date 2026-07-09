@@ -1,6 +1,7 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db } from "../../config/db";
 import { teamMembers, teams } from "../../db/schema/tables/teams";
+import { tasks } from "../../db/schema/tables/tasks";
 import { betterAuthUser } from "../../db/schema/tables/auth";
 import { TeamContext } from "../../types/context.type";
 
@@ -76,6 +77,22 @@ export class TeamService {
       .innerJoin(betterAuthUser, eq(betterAuthUser.id, teamMembers.userId))
       .where(and(...conditions))
 
+    const teamTasks = await db
+      .select({ ownerId: tasks.ownerId })
+      .from(tasks)
+      .where(and(eq(tasks.teamId, teamId), ne(tasks.status, 'done')));
+
+    const workloadMap = teamTasks.reduce((acc, t) => {
+      acc[t.ownerId] = (acc[t.ownerId] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const workload = members.map(m => ({
+      userId: m.userId,
+      name: m.userName,
+      openTask: workloadMap[m.userId] || 0
+    }));
+
     return {
       team: {
         id: team[0].id,
@@ -88,6 +105,7 @@ export class TeamService {
         updatedAt: team[0].updatedAt,
       },
       members,
+      workload,
       myRole: isOwner ? 'owner' : role,
     }
   }

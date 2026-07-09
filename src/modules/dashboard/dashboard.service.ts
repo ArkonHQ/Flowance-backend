@@ -1,5 +1,5 @@
 import { db } from '../../config/db';
-import { tasks, projects, invoices, users } from '../../db/schema';
+import { tasks, projects, invoices, users, clients } from '../../db/schema';
 import { eq, and, lt, ne, gte, sql, inArray } from 'drizzle-orm';
 import { desc } from 'drizzle-orm';
 import { timeEntries } from '../../db/schema/tables/time-entries';
@@ -123,17 +123,18 @@ export class DashboardService {
         const invoiceActivity =  db
             .select({
                 type: sql<string>`'invoice'`.as('type'),
-                description: sql<string>`CONCAT('Invoice #', ${invoices.id}, ' status changed to ', ${invoices.status})`.as('description'),
+                description: sql<string>`CONCAT('Invoice for ', ${clients.name}, ' status changed to ', ${invoices.status})`.as('description'),
                 createdAt: invoices.updatedAt,
             })
             .from(invoices)
+            .innerJoin(clients, eq(clients.id, invoices.clientId))
             .where(and(eq(invoices.ownerId, this.ownerId), this.teamId ? eq(invoices.teamId, this.teamId) : undefined, ...(activityFilter ? [activityFilter] : [])))
 
             const taskFilter = this.periodFilter(tasks.updatedAt)
             const taskActivity = db
                 .select({
                     type: sql<string>`'task'`.as('type'),
-                    description: sql<string>`CONCAT('Task #', ${tasks.id}, ' status changed to ', ${tasks.status})`.as('description'),
+                    description: sql<string>`CONCAT('Task "', left(${tasks.title}, 30), '" status changed to ', ${tasks.status})`.as('description'),
                     createdAt: tasks.updatedAt,
                 })
                 .from(tasks)
@@ -144,7 +145,7 @@ export class DashboardService {
                 const projectActivity = db
                     .select({
                         type: sql<string>`'project'`.as('type'),
-                        description: sql<string>`CONCAT('Project #', ${projects.id}, ' status changed to ', ${projects.status})`.as('description'),
+                        description: sql<string>`CONCAT('Project "', left(${projects.title}, 30), '" status changed to ', ${projects.status})`.as('description'),
                         createdAt: projects.updatedAt,
                     })
                     .from(projects)
@@ -248,10 +249,77 @@ export class DashboardService {
 
             const all = [...projectDeadlines, ...taskDeadlines]
             all.sort((a, b) => (a.deadline?.getTime() || 0) - (b.deadline?.getTime() || 0))
-            return all.slice(0, 10) // limit to 10 items
+            return all.slice(0, 5)
+    }
+
+    // 10. Periodic Hours (grouped by day or month based on period)
+    async getWeeklyHours(): Promise<Array<{ name: string; hours: number }>> {
+        const { start } = this.periodRange();
+        let isMonthly = this.period === 'thisyear' || this.period === 'lastyear' || this.period === 'all';
+        
+        let dateFilter = sql`${timeEntries.date} >= CURRENT_DATE - INTERVAL '6 days'`;
+        if (this.period === '30days') dateFilter = sql`${timeEntries.date} >= CURRENT_DATE - INTERVAL '29 days'`;
+        else if (this.period === '90days') dateFilter = sql`${timeEntries.date} >= CURRENT_DATE - INTERVAL '89 days'`;
+        else if (this.period === 'thisyear') dateFilter = sql`EXTRACT(YEAR FROM ${timeEntries.date}) = EXTRACT(YEAR FROM CURRENT_DATE)`;
+        else if (this.period === 'lastyear') dateFilter = sql`EXTRACT(YEAR FROM ${timeEntries.date}) = EXTRACT(YEAR FROM CURRENT_DATE) - 1`;
+        else if (this.period === 'all') dateFilter = sql`1=1`;
+
+        const groupSelect = isMonthly 
+            ? sql<string>`TO_CHAR(${timeEntries.date}, 'YYYY-MM')`
+            : sql<string>`TO_CHAR(${timeEntries.date}, 'YYYY-MM-DD')`;
+
+        const result = await db
+            .select({
+                dateStr: groupSelect,
+                hours: sql<number>`SUM(${timeEntries.hours})`
+            })
+            .from(timeEntries)
+            .innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+            .innerJoin(projects, eq(projects.id, tasks.projectId))
+            .where(and(
+                eq(projects.ownerId, this.ownerId), this.teamId ? eq(projects.teamId, this.teamId) : undefined,
+                dateFilter
+            ))
+            .groupBy(groupSelect)
+
+        if (isMonthly) {
+            // Sort chronologically
+            result.sort((a, b) => a.dateStr.localeCompare(b.dateStr));
+            return result.map(r => {
+                const [y, m] = r.dateStr.split('-');
+                const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+                return {
+                    name: d.toLocaleDateString('en-US', { month: 'short' }),
+                    hours: Number(r.hours) || 0
+                }
+            });
         }
 
-        // 10. Most Active Member (user with most tasks completed in last 30 days)
+        // For daily
+        const now = new Date()
+        const daysToReturn = this.period === '30days' ? 30 : this.period === '90days' ? 90 : 7;
+        const weeklyData = []
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        
+        for (let i = daysToReturn - 1; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)
+            const dateStr = d.toLocaleDateString('en-CA')
+            
+            let name = days[d.getDay()];
+            if (daysToReturn > 7) {
+                name = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }
+
+            const record = result.find(r => r.dateStr === dateStr)
+            weeklyData.push({
+                name,
+                hours: record ? Number(record.hours) : 0
+            })
+        }
+        return weeklyData
+    }
+
+    // 11. Most Active Member (user with most tasks completed in last 30 days)
          async getMostActiveMember(): Promise<{ userName: string; taskCount: number } | null> {
             const result = await db
             .select({

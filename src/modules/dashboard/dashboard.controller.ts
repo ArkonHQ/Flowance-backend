@@ -22,6 +22,7 @@ export const getDashboard = asyncHandler(async (req: any, res: any) => {
         service.getTeamWorkload(),
         service.getTasksCompletedThisWeek(),
         service.getUnpaidAmount(),
+        service.getWeeklyHours(),
     ])
 
     const totalRevenue = Number(data[0]) || 0;
@@ -57,6 +58,7 @@ export const getDashboard = asyncHandler(async (req: any, res: any) => {
 
     const tasksCompletedThisWeek = Number(data[11]) || 0;
     const unpaidAmount = Number(data[12]) || 0;
+    const weeklyHours = data[13] || [];
 
     res.json({
         success: true,
@@ -74,6 +76,7 @@ export const getDashboard = asyncHandler(async (req: any, res: any) => {
             teamWorkload,
             tasksCompletedThisWeek,
             unpaidAmount,
+            weeklyHours
         }
     })
 })
